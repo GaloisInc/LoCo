@@ -38,10 +38,10 @@ defineMEP TwoOtherInts =
 <!-- At this point, you can think of the types of `x` and `y` as unsigned
 32-bit integer. -->
 
-The philosophy `TwoOtherInts` should then be able to parse `TwoInts`'s member
-`x` without parsing its `y`. This specialization obviously doesn't provide
-substantial efficiency gains with this format, but as we introduce more complex
-formats, that calculus will change.
+`TwoOtherInts` should then be able to parse `TwoInts`'s member `x` without
+parsing its `y`. This specialization obviously doesn't provide substantial
+efficiency gains with this format, but as we introduce more complex formats,
+that calculus will change.
 
 # Locations
 
