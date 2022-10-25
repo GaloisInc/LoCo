@@ -247,10 +247,10 @@ In/out of band
 With seek?
 
 
-[^1]:
-  ```
-  RANGE ::= '@' '[' LOC ',' LOCS ')'
-  LOC ::= <variable-name>
-  LOCS ::= LOC
-         | LOC ',' LOCS
-  ```
+[^1]: A formal grammar for range parameters:
+    ```
+    RANGE ::= '@' '[' LOC ',' LOCS ')'
+    LOC   ::= <variable-name>
+    LOCS  ::= LOC
+            | LOC ',' LOCS
+    ```
