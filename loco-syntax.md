@@ -23,20 +23,23 @@ complex formats - that is, using the same data format declaration(s) to
 instantiate potentially several parsers, each of which targets a subset of the
 format being described.
 
-We can apply this philosophy to `TwoInts` if we only care about obtaining its
-`x`...
+Extraction of single-entrypoint parsers from MEPs occurs solely at the
+application level - that is, LoCo does not have in-language constructs for
+declaring non-multi-entrypoint parsers. Users can still extract fields of MEPs
+for use in other MEPs, though, using dot-notation syntax:
 
 ```
-defineSEP TwoIntsX = extract TwoInts x
-defineSEP TwoIntsX = TwoInts `extract` x
-defineSEP TwoIntsX = extract x from TwoInts
+defineMEP TwoOtherInts =
+  { x := TwoInts.x
+  , y := UInt32
+  }
 ```
 
 <!-- At this point, you can think of the types of `x` and `y` as unsigned
 32-bit integer. -->
 
-`TwoIntsX` should then be able to encounter an instance of `TwoInts` and parse
-its `x` without parsing its `y`. This specialization obviously doesn't provide
+The philosophy `TwoOtherInts` should then be able to parse `TwoInts`'s member
+`x` without parsing its `y`. This specialization obviously doesn't provide
 substantial efficiency gains with this format, but as we introduce more complex
 formats, that calculus will change.
 
@@ -108,11 +111,33 @@ is obvious that `[4, 8)` is a 4-wide range, while the same can't be said of
 
 TODO: width notation
 
-Our ability to extract more atomic parsers from this MEP is relatively
-unchanged. We just plumb range and location parameters through our `defineSEP`
-form:
+Our previously-introduced dot-notation operator extends relatively naturally to
+this expanded syntax. MEP members derived from other MEPs still require location
+arguments - the form and arity of which are defined by the (primitive or
+user-defined) parser's signature.
 
-MARK: this is funky - `TwoIntsX` *should* only parse a subset of the range
+```
+defineMEP TwoOtherInts @[L0, L1, L2)@ =
+  { x := TwoInts.x @[L0, L1)@
+  , y := UInt32 @[L1, L2)@
+  }
+```
+
+`TwoInts.x` is a `UInt32`, which we know expects a single range parameter
+comprised of two location parameters, so we abstract over the necessary
+individual locations in `TwoOtherInts`'s signature to provide that.
+
+As mentioned, this procedure expands naturally to dot-accesses resolving to
+user-defined parsers:
+
+```
+defineMEP ThreeInts @[L0, L1, L2, L3)@ =
+  { xy := TwoOtherInts @[L0, L1, L2)@
+  , z := UInt32 @[L2, L3)@
+  }
+```
+
+<!-- MARK: this is funky - `TwoIntsX` *should* only parse a subset of the range
 that `TwoInts` otherwise needs, but if we don't introduce the full range in
 its signature we can't pass the number of location parameters that `TwoInts`
 expects:
@@ -121,8 +146,7 @@ expects:
 defineSEP TwoIntsX @[L0, L1, ?) = extract (TwoInts @[L0, L1, L2)) x
 defineSEP TwoIntsX @[L0, L1, ?) = (TwoInts @[L0, L1, L2)) `extract` x
 defineSEP TwoIntsX @[L0, L1, ?) = extract x from (TwoInts @[L0, L1, L2))
-```
-
+``` -->
 
 # Seek
 
