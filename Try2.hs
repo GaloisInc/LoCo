@@ -57,16 +57,16 @@ data RRegion = RR { rr_start :: RLoc
                   }
                deriving (Eq,Ord,Read,Show)
 
--- | Result Location, however, we need to be able to capture two things:
+-- | Result Location.  We need to be able to capture two things:
 --    1. where something was parsed, R_Int 
 --    2. where we parsed the "pointers, offsets, and lengths" required to
 --       know where to parse.
 
 data RLoc = RL_Int Loc
              -- ^ constant Loc value for 
-          | RL_Indrct [RRegion] RLoc  
+          | RL_Indirect [RRegion] RLoc  
              -- ^ needed to parse file to get val
-             -- could be Ptr
+             -- could be Ptr/Len/etc.
              -- not recording the interpretation of bytes to get val
           deriving (Eq,Ord,Read,Show)
 
@@ -85,7 +85,9 @@ splitAt_rr l r = stub l r
 --   (might be representable as an Start/End Int pair on a file)
 
 
-type Stream = String -- FIXME: String is NOT a good Stream!
+type Stream = String
+  -- FIXME: String is NOT a good Stream!
+  -- use bytestreams (or ..?)
 
 -- | stream operations
 --
@@ -149,6 +151,7 @@ data Result a = Result a                -- ^ successful parse result
               | Error_Parse [String]    -- ^ errors in parser itself 
               deriving (Eq,Ord,Read,Show,Functor)
 
+
 instance Applicative Result where
   pure a = Result a
   
@@ -170,36 +173,12 @@ instance Monad Result where
 -- | apply: the 'Stream' is already restricted to the relevant Region.
 
 applyDynParser :: Stream -> DynParser a -> Result (Ann a, RRegion)
+applyDynParser s (DynP p)  = p s
+
 applyFWParser  :: Stream -> FWParser a  -> Result a
+applyFWParser  s (FWP w p) = assert (w == width_s s)
+                           $ p s
 
-applyDynParser = stub
-applyFWParser  = stub
-
-
-
-{- alts
-  A. dynParser to FW : parse and also verify at EOF
-  B dynParser to Dyn: parse, and return remaining
-  C. fwParser to  FW:  [statically] verify length, parse
-    - lengths [in type system] must be right
-  D. fwParser to  Dyn: [statically] return remaining, if any
-    - if Dyn > len then can split statically: becomes like fwParser to FW
--}
-
-{-
-applyParser :: Stream -> DynParser a -> Maybe (a, DynRegion)
-applyParser s (DynP p) = p s
-
-applyFWParser  :: Int -> Stream -> FWParser  a -> Maybe a
-applyFWParser i s (FWP j p) = assert (j == length s)
-                            $ p s
-
-  -- i == j?
-  -- where to extract the 'j' width stream:
-  --   - right here or in caller!!
-  -- design is to extract out a fixed width stream! (rather than "i s")?
-  --  -- use bytestreams!!
--}
 
 ---- examples: abstractions -----------------------------------------------
 
@@ -215,6 +194,33 @@ pXY = DynP p
         [r1,r2] = splitAt_rr n (regionOf_s s)
                                
 
+-- | FIXME: TODO
+--
+-- AHA: This parses 4-bytes, then jumps to a dynamic location to parse
+-- a static width 4-byte region, so ...
+--   - static parser?? / dynamic parser??
+--   - MERGE these??
+pPX :: DynParser X
+pPX = DynP p
+  where
+  p s = do
+        locX            <- applyFWParser  (getRegion r1 s) pInt32
+        let r2 = RR (RL_Int $ toLOC locX) (RL_Int $ width_fwp pX)
+        x               <- applyFWParser  (getRegion r2 s) pX
+        return ( Ann x [RR (RL_Indirect [r1] (RL_Int locX))
+                           (RL_Int n)
+                       ]
+               , rr
+               )
+        where
+        n = width_fwp pInt32
+        [r1,rr] = splitAt_rr n (regionOf_s s)
+
+  -- NOTE: this 'locX' should be with respect to Stream 's'!
+  --  - so your idea of restricting Streams as you go is not going to work
+  --    well with 'global' Loc's to seek to
+
+toLOC = id -- TODO
 
 ---- examples: basic parsers ----------------------------------------------
 
@@ -230,15 +236,6 @@ pX = X <$> pInt32 -- static
 pY :: DynParser Y
 pY = Y <$> pInt   -- dynamic
 
--- FIXME: TODO
--- pPY :: Parser (R Y)
--- pPY =  stub
-
-  -- AHA: This parses 4-bytes, then jumps to a dynamic location, so ...
-  --   - static parser (that calls dynamic)
-  --   - dynamic parser??
-  --   - MERGE these.
-  
 {-
   pPY :: [Region] -> Parser (R Y)
   pPY [r] = do
