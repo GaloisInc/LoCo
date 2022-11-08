@@ -8,8 +8,39 @@ import Control.Arrow
 import Control.Applicative
 import Data.Functor
 
+{- |
+ISSUES/TODO:
+  - Big Problem One
+    - These don't jive:
+      1. The passing of localized regions to 'parsers'
+      2. Being able to set the region to anywhere in the file.
+    - see 'pPX'
+       - the FIXME!
 
-{-
+  - Design
+    - see 'pPX'
+      - have Big Problem One
+      - note: parses 4-bytes, then jumps to a dynamic location to parse
+        a static width 4-byte region, so ...
+        - static parser?? / dynamic parser??
+        - need different design!
+
+      - design feels wrong
+        - using DynParser when all the fields are static!
+      
+    - Capture whether a parser can fail (or always succeed)
+      - seems that LoCo is in position to know this information. E.g.,
+        parsers such that
+        - FW: if we provide right-sized region, it *will* succeed.
+        - DW: if we know region is "1-5", it *will* succeed.
+    
+    - Is this the right time to try to create a desired "monadic"
+      abstraction??
+
+    - Use Region (R_Dyn | R_MaxW | R_FixW) to merge ParserFW/ParserDyn?
+      - not quite sufficient
+    - Use Overloading to capture diffs between ParserFW/ParserDyn?
+
 TERMS:
  - M-E-Ps
  - Regions (not ranges, not _)
@@ -116,9 +147,8 @@ getRegion r s = stub r s
 - Harder Design
   - How easily can we generalize this to M-E-P parsers?
 
-- Later Design
+- Later
   - Function to analyze & convert from DynP to FWP (when it is).
-  - Capture whether a parser can fail (or must succeed)
 -}
 
 -- | A Fixed Width parser: it fails unless we consume the full stream.
@@ -127,7 +157,7 @@ getRegion r s = stub r s
 -- No 'Ann' is required as all substructure is now gone.
 -- 
 -- Issues/Questions:
---  - FUTURE: changed for MEP?
+--  - FUTURE: how is this changed for MEP?
 
 data FWParser a = FWP { width_fwp :: Int
                       , parser    :: Stream -> Result a
@@ -194,12 +224,7 @@ pXY = DynP p
         [r1,r2] = splitAt_rr n (regionOf_s s)
                                
 
--- | FIXME: TODO
---
--- AHA: This parses 4-bytes, then jumps to a dynamic location to parse
--- a static width 4-byte region, so ...
---   - static parser?? / dynamic parser??
---   - MERGE these??
+-- | parse a pointer to an X
 pPX :: DynParser X
 pPX = DynP p
   where
@@ -216,11 +241,12 @@ pPX = DynP p
         n = width_fwp pInt32
         [r1,rr] = splitAt_rr n (regionOf_s s)
 
-  -- NOTE: this 'locX' should be with respect to Stream 's'!
-  --  - so your idea of restricting Streams as you go is not going to work
-  --    well with 'global' Loc's to seek to
+  -- FIXME
+  --   This 'locX' is in relation to full file, but one would
+  --   expect it should be with respect to Stream 's'!
 
 toLOC = id -- TODO
+
 
 ---- examples: basic parsers ----------------------------------------------
 
@@ -236,16 +262,8 @@ pX = X <$> pInt32 -- static
 pY :: DynParser Y
 pY = Y <$> pInt   -- dynamic
 
-{-
-  pPY :: [Region] -> Parser (R Y)
-  pPY [r] = do
-            offset <- pUint32 r
-            rNew   <- mkReg offset
-            y      <- pY rNew
-            return (R rNew y)
--}
 
----- Prims -------------------------------------------------------------------
+---- Primitive Parsers ----------------------------------------------------
 
 type Int32 = Int  -- FIXME
 
