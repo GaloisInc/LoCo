@@ -34,16 +34,19 @@ ISSUES/TODO:
         - FW: if we provide right-sized region, it *will* succeed.
         - DW: if we know region is "1-5", it *will* succeed.
     
-    - Is this the right time to try to create a desired "monadic"
+    - Is this the right time to try to create some desired "monadic"
       abstraction??
 
-    - Use Region (R_Dyn | R_MaxW | R_FixW) to merge ParserFW/ParserDyn?
+    - Use Region (R_Dyn | R_MaxW | R_FixW) to merge ParserFW|ParserDyn?
       - not quite sufficient
     - Use Overloading to capture diffs between ParserFW/ParserDyn?
 
 TERMS:
  - M-E-Ps
  - Regions (not ranges, not _)
+   - different terms for
+     - input/unconstrained regions and
+     - known regions [after we have parsed]
  - Locations (not offsets)
 -}
 
@@ -79,10 +82,11 @@ type RRs = [RRegion]
 
 
 -- | Attaches 'RRs' to 'a'.
+--   attach file loc / provenance / source / ...?
 data Ann a = Ann a [RRegion]
              deriving (Eq,Ord,Read,Show,Functor)
 
--- | note recursive pair here.
+-- | note mutual recursion of RRegion and RLoc:
 data RRegion = RR { rr_start :: RLoc
                   , rr_width :: RLoc
                   }
@@ -95,7 +99,7 @@ data RRegion = RR { rr_start :: RLoc
 
 data RLoc = RL_Int Loc
              -- ^ constant Loc value for 
-          | RL_Indirect [RRegion] RLoc  
+          | RL_RAnn RLoc [RRegion]
              -- ^ needed to parse file to get val
              -- could be Ptr/Len/etc.
              -- not recording the interpretation of bytes to get val
@@ -183,6 +187,7 @@ data Result a = Result a                -- ^ successful parse result
 
 
 instance Applicative Result where
+  
   pure a = Result a
   
   liftA2 f (Result a)       (Result b) = Result (f a b)
@@ -194,9 +199,9 @@ instance Monad Result where
               Result a       -> f a
               Error_Short    -> Error_Short
               Error_Parse ss -> Error_Parse ss
+
               
 ---- applying parsers --------------------------------------------------------
-
 -- Design
 --  - use a reader monad to hide the full/restricted stream?
 
@@ -232,7 +237,7 @@ pPX = DynP p
         locX            <- applyFWParser  (getRegion r1 s) pInt32
         let r2 = RR (RL_Int $ toLOC locX) (RL_Int $ width_fwp pX)
         x               <- applyFWParser  (getRegion r2 s) pX
-        return ( Ann x [RR (RL_Indirect [r1] (RL_Int locX))
+        return ( Ann x [RR (RL_RAnn (RL_Int locX) [r1])
                            (RL_Int n)
                        ]
                , rr
