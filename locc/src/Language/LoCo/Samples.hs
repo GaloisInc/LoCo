@@ -30,9 +30,9 @@ lvParser :: Parser
 lvParser = Parser ["R"] (Map.fromList [rl, l, rv, v]) lvType
   where
     rl = ("RL", App "take" [Lit 1, "R"])
-    l = ("l", App "u8" ["RL"])
+    l = ("l", RegApp "u8" "RL")
     rv = ("RV", App "drop" [Lit 1, "R"])
-    v = ("v", App (App "many" ["l", "u8"]) ["RV"])
+    v = ("v", RegApp (App "many" ["l", "u8"]) "RV")
 
 {-
 fifthElement :: Entrypoint LV U8

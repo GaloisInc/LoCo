@@ -43,6 +43,7 @@ data Expr
   | Var Ident
   -- | Gte Expr Expr
   | App Expr [Expr]
+  | RegApp Expr Ident
 
 instance IsString Expr where
   fromString = Var
