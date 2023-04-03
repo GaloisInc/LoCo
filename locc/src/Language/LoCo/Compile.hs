@@ -105,7 +105,7 @@ compileRecordParser recName recFieldTys parserBinds =
     let recCon = conE (tick' recName)
         recFields = [varE (tick' recField) | recField <- Map.keys recFieldTys]
     ret <- noBindS (appE [|pure|] (foldl1 appE (recCon : recFields)))
-    pure (MDoE Nothing (pBinds <> rBinds <> [ret]))
+    pure (MDoE Nothing (rBinds <> pBinds <> [ret]))
   where
     parseResultBinds = parserBinds `Map.intersection` recFieldTys
     regionBinds = parserBinds Map.\\ recFieldTys
