@@ -58,8 +58,10 @@ data Entrypoint = Entrypoint
   { epTypeBase :: Type,
     epTypeProjection :: Type,
     epParseBase :: Ident,
-    epParseProjection :: [Ident]
+    epParseProjection :: [Accessor]
   }
+
+data Accessor = Field String | Idx Int
 
 -------------------------------------------------------------------------------
 

@@ -14,6 +14,7 @@ import Data.Set qualified as Set
 import Data.String (IsString (..))
 import Data.Word
 import Language.Haskell.TH
+import Language.LoCo.Parser qualified
 import Language.LoCo.Syntax hiding (Type)
 import Language.LoCo.Syntax qualified as L
 
@@ -60,8 +61,8 @@ compileThunkedType ty =
 parserT :: Q Type -> Q Type
 parserT = appT (conT "Parser")
 
-region :: Q Type
-region = conT "Region"
+regionT :: Q Type
+regionT = conT "Region"
 
 thunkT :: Q Type -> Q Type
 thunkT = appT (conT "Thunk")
@@ -72,10 +73,10 @@ funT = foldl1 (appT . appT arrowT)
 word :: Int -> Q Type
 word i =
   case i of
-    1 -> [t|Word8|]
-    2 -> [t|Word16|]
-    4 -> [t|Word32|]
-    8 -> [t|Word64|]
+    1 -> [t|Data.Word.Word8|]
+    2 -> [t|Data.Word.Word16|]
+    4 -> [t|Data.Word.Word32|]
+    8 -> [t|Data.Word.Word64|]
     _ -> fail ("not a supported word size: " <> show i)
 
 -------------------------------------------------------------------------------
@@ -83,7 +84,7 @@ word i =
 declareParser :: Ident -> Parser -> Q [Dec]
 declareParser name Parser {..} = sequence [signature, funD name' clauses]
   where
-    signature = sigD name' (funT [region, parserT (compileThunkedType pResult)])
+    signature = sigD name' (funT [regionT, parserT (compileThunkedType pResult)])
     name' = mkName name
 
     clauses = [clause (map (varP . lower') pRegionParams) body []]
@@ -139,6 +140,30 @@ asPrim i =
     "u8" -> Just [|parseU8|]
     "many" -> Just [|manyT|]
     _ -> Nothing
+
+-------------------------------------------------------------------------------
+
+declareEntrypoint :: Ident -> Entrypoint -> Q [Dec]
+declareEntrypoint i Entrypoint {..} =
+  do
+    epSig <- sigD fnName [t|Language.LoCo.Parser.Parser $(compileType epTypeProjection)|]
+    regionBind <- bindS [p|region|] [|topRegion|]
+    parseBind <- bindS [p|result|] [|$(varE (mkName epParseBase)) region|]
+    let acc = foldl (\z a -> [|$(accessor a) . $z|]) [|id|] epParseProjection
+    result <- noBindS [|force ($acc result)|]
+    let epFnBody = NormalB (DoE Nothing [regionBind, parseBind, result])
+        epFn = FunD fnName [Clause [] epFnBody []]
+    pure [epSig, epFn]
+  where
+    fnName = mkName i
+
+accessor :: Accessor -> Q Exp
+accessor a =
+  case a of
+    Field f -> varE (tick' f)
+    Idx i -> [|(!! $(litE (integerL (fromIntegral i))))|]
+
+-------------------------------------------------------------------------------
 
 instance IsString Name where
   fromString = mkName

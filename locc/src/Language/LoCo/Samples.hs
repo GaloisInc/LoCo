@@ -44,4 +44,4 @@ fifthElement = Entrypoint {..}
     epTypeBase = lvType
     epTypeProjection = u8
     epParseBase = "parseLV"
-    epParseProjection = ["v", "4"]
+    epParseProjection = [Field "v", Idx 4]

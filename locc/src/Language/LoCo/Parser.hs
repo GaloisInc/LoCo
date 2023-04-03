@@ -1,10 +1,20 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE RecursiveDo #-}
 
-module Language.LoCo.Parser where
+module Language.LoCo.Parser
+  ( Parser,
+    Thunk,
+    force,
+    manyT,
+    onSubRegion,
+    parseU8,
+    runParser,
+    topRegion,
+  )
+where
 
 import Control.Monad.Except
 import Control.Monad.Reader
