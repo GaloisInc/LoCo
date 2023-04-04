@@ -17,6 +17,7 @@ import Language.Haskell.TH
 import Language.LoCo.Parser qualified
 import Language.LoCo.Syntax hiding (Type)
 import Language.LoCo.Syntax qualified as L
+import Language.LoCo.Toposort (topoSortPossibly)
 
 declareType :: L.Type -> Q [Dec]
 declareType ty =
@@ -88,31 +89,40 @@ declareParser name Parser {..} = sequence [signature, funD name' clauses]
     name' = mkName name
 
     clauses = [clause (map (varP . lower') pRegionParams) body []]
-    body = normalB (compileParser pBinds pResult)
+    body = normalB (compileParser pRegionParams pBinds pResult)
 
-compileParser :: Map Ident Expr -> L.Type -> Q Exp
-compileParser parserBinds resultTy =
+compileParser :: [Ident] -> Map Ident Expr -> L.Type -> Q Exp
+compileParser regionParams parserBinds resultTy =
   case resultTy of
-    RecordTy {..} -> compileRecordParser recordName recordFieldTys parserBinds
+    RecordTy {..} -> compileRecordParser recordName recordFieldTys regionParams parserBinds
     _ -> fail ""
 
--- Assume topologically sorted for now
-compileRecordParser :: Ident -> Map Ident L.Type -> Map Ident Expr -> Q Exp
-compileRecordParser recName recFieldTys parserBinds =
+compileRecordParser :: Ident -> Map Ident L.Type -> [Ident] -> Map Ident Expr -> Q Exp
+compileRecordParser recName recFieldTys regionParams parserBinds =
   do
-    pBinds <- sequence [parseBind i e | (i, e) <- Map.toList parseResultBinds]
-    rBinds <- sequence [regionBind i e | (i, e) <- Map.toList regionBinds]
+    let renaming =
+          Map.fromList $
+            [(i, tick i) | i <- Map.keys parseResultBinds]
+              <> [(i, lower i) | i <- Map.keys regionBinds]
+    let primDeps = map (,[]) (regionParams <> Map.keys prims)
+        varDeps = Map.toList (vars <$> parserBinds)
+    bindOrdering <- reverse <$> topoSortPossibly (primDeps <> varDeps)
+    binds <-
+      sequence
+        [ bindS v e
+          | i <- bindOrdering,
+            i `Map.notMember` prims,
+            i `notElem` regionParams,
+            let v = varP (mkName (renaming Map.! i)),
+            let e = expr (parserBinds Map.! i)
+        ]
     let recCon = conE (tick' recName)
         recFields = [varE (tick' recField) | recField <- Map.keys recFieldTys]
     ret <- noBindS (appE [|pure|] (foldl1 appE (recCon : recFields)))
-    pure (MDoE Nothing (rBinds <> pBinds <> [ret]))
+    pure (MDoE Nothing (binds <> [ret]))
   where
     parseResultBinds = parserBinds `Map.intersection` recFieldTys
     regionBinds = parserBinds Map.\\ recFieldTys
-
-    parseBind i e = bindS (varP (tick' i)) (expr e)
-    regionBind i e = bindS (varP (lower' i)) (expr e)
-
     shouldTick = Map.keysSet parseResultBinds
     expr = compileExpr' shouldTick
 
@@ -126,20 +136,11 @@ compileExpr' shouldTick = go
       case expr of
         L.Lit i -> litE (integerL i)
         Var v
-          | Just e <- asPrim v -> e
+          | Just e <- prims Map.!? v -> e
           | v `Set.member` shouldTick -> varE (tick' v)
           | otherwise -> varE (lower' v)
         App e es -> foldl1 appE (map go (e : es))
         RegApp e r -> [|onSubRegion $(varE (lower' r)) $(go e)|]
-
-asPrim :: Ident -> Maybe (Q Exp)
-asPrim i =
-  case i of
-    "take" -> Just [|rTake|]
-    "drop" -> Just [|rDrop|]
-    "u8" -> Just [|parseU8|]
-    "many" -> Just [|manyT|]
-    _ -> Nothing
 
 -------------------------------------------------------------------------------
 

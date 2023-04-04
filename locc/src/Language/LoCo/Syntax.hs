@@ -1,8 +1,15 @@
 {-# HLINT ignore "Use newtype instead of data" #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
+
 module Language.LoCo.Syntax where
 
+import Data.List qualified as List
 import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.String (IsString (..))
+import Language.Haskell.TH qualified as TH
 
 type Ident = String
 
@@ -44,6 +51,24 @@ data Expr
   -- | Gte Expr Expr
   | App Expr [Expr]
   | RegApp Expr Ident
+  deriving (Show)
+
+vars :: Expr -> [Ident]
+vars expr =
+  case expr of
+    Lit _ -> mempty
+    Var v -> [v]
+    App e es -> vars e <> foldMap vars es
+    RegApp e v -> vars e <> [v]
+
+prims :: Map Ident (TH.Q TH.Exp)
+prims =
+  Map.fromList
+    [ ("take", [|rTake|]),
+      ("drop", [|rDrop|]),
+      ("u8", [|parseU8|]),
+      ("many", [|manyT|])
+    ]
 
 instance IsString Expr where
   fromString = Var

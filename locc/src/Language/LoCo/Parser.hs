@@ -111,7 +111,7 @@ many = many' . fromIntegral
 manyT' :: Int -> (Region -> Parser (Thunk a)) -> Region -> Parser [Thunk a]
 manyT' howMany parse region
   | howMany == 0 = pure []
-  | width region `mod` howMany /= 0 = undefined
+  | width region `mod` howMany /= 0 = throwError "applied `many` to improperly-sized input"
   | otherwise =
       do
         pre <- liftEither $ rTake subRegionWidth region
