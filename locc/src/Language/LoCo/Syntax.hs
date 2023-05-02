@@ -37,6 +37,7 @@ generating this entrypoint must generate preconditions
 data Type
   = UnsignedTy {unsignedWidth :: Int}
   | RecordTy {recordName :: Ident, recordFieldTys :: Map Ident Type}
+              -- NOTE[mt]: recordName?
   | ListTy {listInner :: Type} -- length?
   | ParserTy
       { -- ptyRegionParams :: [Ident],
@@ -44,6 +45,15 @@ data Type
         -- ptyRegionWidth :: Expr, -- a Type on its own?
         ptyResult :: Type
       }
+      -- NOTE[mt]: dispense with?
+      
+-- NOTE[mt]:
+--  - separate types for
+--    - something bound in the pBinds?
+--    - the RecordTy?
+--  - hmmm
+--    - f :: *->* parameter, so we can apply Thunk?
+--
 
 data Expr
   = Lit Integer
@@ -85,7 +95,10 @@ data Entrypoint = Entrypoint
     epParseBase :: Ident,
     epParseProjection :: [Accessor]
   }
-
+  -- NOTE[mt]:
+  --  - better name maybe?  '{Demand/Get}Entry' 
+  --  - This would eventually be inside Expr?
+ 
 data Accessor = Field String | Idx Int
 
 -------------------------------------------------------------------------------
