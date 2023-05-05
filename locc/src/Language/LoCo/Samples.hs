@@ -18,7 +18,7 @@ lvType = RecordTy "LV" (Map.fromList fields)
     fields = [("l", u8), ("v", ListTy u8)]
 
 {-
-parseLV :: Parser LV
+parseLV :: {- Region -> -} Parser LV
 parseLV @R =
   { @RL := take 1 @R
   , l = u8 @RL
@@ -35,8 +35,8 @@ lvParser = Parser ["R"] (Map.fromList [rl, l, rv, v]) lvType
     v = ("v", RegApp (App "many" ["l", "u8"]) "RV")
 
 {-
-fifthElement :: Entrypoint LV U8
-fifthElement = parseLV.v.4
+five :: Entrypoint LV U8
+five = parseLV.v.4
 -}
 fifthElement :: Entrypoint
 fifthElement = Entrypoint {..}
@@ -45,3 +45,15 @@ fifthElement = Entrypoint {..}
     epTypeProjection = u8
     epParseBase = "parseLV"
     epParseProjection = [Field "v", Idx 4]
+
+{- 
+getL :: Entrypoint LV U8
+getL = parseLV.l
+-}
+lEntry :: Entrypoint
+lEntry = Entrypoint{..}
+  where
+    epTypeBase = lvType
+    epTypeProjection = u8
+    epParseBase = "parseLV"
+    epParseProjection = [Field "l"]

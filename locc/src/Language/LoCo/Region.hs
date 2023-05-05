@@ -22,5 +22,5 @@ rTake i r
 
 rDrop :: MonadError String m => Int -> Region -> m Region
 rDrop i r
-  | begin r + i > end r = throwError "bad take"
+  | begin r + i > end r = throwError "bad drop"
   | otherwise = pure (begin r + i, end r)

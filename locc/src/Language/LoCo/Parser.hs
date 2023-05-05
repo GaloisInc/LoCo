@@ -1,8 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Language.LoCo.Parser
   ( Parser,
@@ -37,7 +35,7 @@ newtype Parser a = Parser
       Monad,
       MonadError Error,
       MonadReader Document,
-      MonadFix,
+      -- MonadFix,
       MonadIO
     )
 
@@ -87,7 +85,7 @@ parseU8 region =
     input <- ask
     thunkM $
       do
-        io (putStrLn $ "parsing from " <> input)
+        io (putStrLn $ "parsing from '" <> input <> "'")
         case readMaybe input of
           Nothing -> throwError ""
           Just r -> pure r

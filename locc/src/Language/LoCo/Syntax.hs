@@ -3,11 +3,8 @@
 
 module Language.LoCo.Syntax where
 
-import Data.List qualified as List
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Set (Set)
-import Data.Set qualified as Set
 import Data.String (IsString (..))
 import Language.Haskell.TH qualified as TH
 
@@ -39,12 +36,7 @@ data Type
   | RecordTy {recordName :: Ident, recordFieldTys :: Map Ident Type}
               -- NOTE[mt]: recordName?
   | ListTy {listInner :: Type} -- length?
-  | ParserTy
-      { -- ptyRegionParams :: [Ident],
-        -- ptyRegionConstraint :: Expr,
-        -- ptyRegionWidth :: Expr, -- a Type on its own?
-        ptyResult :: Type
-      }
+  | ParserTy { ptyResult :: Type}
       -- NOTE[mt]: dispense with?
       
 -- NOTE[mt]:
@@ -58,10 +50,10 @@ data Type
 data Expr
   = Lit Integer
   | Var Ident
-  -- | Gte Expr Expr
   | App Expr [Expr]
   | RegApp Expr Ident
   deriving (Show)
+
 
 vars :: Expr -> [Ident]
 vars expr =
@@ -88,6 +80,9 @@ data Parser = Parser
     pBinds :: Map Ident Expr,
     pResult :: Type
   }
+
+
+-- lazy vector: Thunk [a], or [Thunk a]
 
 data Entrypoint = Entrypoint
   { epTypeBase :: Type,
