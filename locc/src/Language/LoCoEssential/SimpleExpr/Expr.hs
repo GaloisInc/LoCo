@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Language.LoCoEssential.Expr where
+module Language.LoCoEssential.SimpleExpr.Expr where
 
 import Control.Monad.Except (throwError)
 import Data.Map qualified as Map

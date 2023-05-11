@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Language.LoCoEssential.ExprParse where
+module Language.LoCoEssential.ParsingExpr.Expr where
 
 import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class
