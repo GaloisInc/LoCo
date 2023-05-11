@@ -1,16 +1,33 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Language.LoCoEssential.Samples where
 
+import Control.Monad.Except (MonadError, throwError)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Map qualified as Map
 import Data.Text (Text)
+import Data.Text.IO qualified as Text
+import Data.Void (Void)
 import Language.LoCoEssential.Essence
 import Language.LoCoEssential.Interp.Lazy (interpret)
 import Language.LoCoEssential.Parse
 import Language.LoCoEssential.ParsingExpr.Expr qualified as ParsingExpr
 import Language.LoCoEssential.ParsingExpr.Parse qualified as ParsingExpr
 import Language.LoCoEssential.SimpleExpr.Expr qualified as SimpleExpr
-import Text.Megaparsec (runParser)
+import Text.Megaparsec (Parsec, runParser, errorBundlePretty)
+
+fromFile ::
+  (MonadIO m, MonadError IOError m) =>
+  FilePath ->
+  Parsec Void Text expr ->
+  m (LoCoModule expr)
+fromFile file parseExpr =
+  do
+    text <- liftIO (Text.readFile file)
+    case runParser (parseModule parseExpr) file text of
+      Left errBundle -> throwError (userError (errorBundlePretty errBundle))
+      Right m -> pure m
 
 smallModule :: LoCoModule SimpleExpr.Expr
 smallModule =
