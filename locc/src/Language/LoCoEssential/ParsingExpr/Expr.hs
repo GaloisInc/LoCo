@@ -18,9 +18,11 @@ data Expr
   | EAdd Expr Expr
   | ERegion {eRegionBegin :: Expr, eRegionEnd :: Expr}
   | EParse {eParseTy :: ParseTy, eParseInput :: Expr, eParseLoc :: Expr}
+  deriving (Show)
 
 data ParseTy
   = Integer
+  deriving (Show)
 
 data Value
   = VInt Int
