@@ -9,7 +9,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Void (Void)
 import Language.LoCoEssential.Essence
-import Language.LoCoEssential.SimpleExpr.Parse (braced, symbol)
+import Language.LoCoEssential.SimpleExpr.Parse (braced, symbol, ws)
 import Text.Megaparsec
 
 type Parser v =
@@ -43,12 +43,14 @@ parseModuleBindings parseExpr =
     binds <- braced (parseBind parseExpr `sepBy1` separator)
     pure (Map.fromList binds)
   where
-    separator = single ','
+    separator = single ',' >> ws
 
 parseBind :: Parser rhs -> Parser (Symbol, rhs)
 parseBind parseRhs =
   do
     s <- symbol
+    ws
     void (single '=')
+    ws
     e <- parseRhs
     pure (s, e)
