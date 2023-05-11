@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Language.LoCoEssential.Interp.Trad where
+module Language.LoCoEssential.Interp.Trad (interpret) where
 
 import Control.Monad
 import Control.Monad.Except

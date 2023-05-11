@@ -2,15 +2,23 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Language.LoCoEssential.Interp.Lazy where
+module Language.LoCoEssential.Interp.Lazy (interpret) where
 
 import Control.Monad (foldM)
 import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Map qualified as Map
 import Language.LoCoEssential.Essence
-import Language.LoCoEssential.Expr
 import Language.LoCoEssential.Thunk
+
+interpret ::
+  (MonadIO m, MonadError IOError m, FreeVars e, Eval m e v) =>
+  LoCoModule e ->
+  m (Env (m v))
+interpret lmod =
+  do
+    env <- interpret' lmod
+    pure $ fmap force env
 
 interpret' ::
   (MonadIO m, FreeVars e, MonadError IOError m, Eval m e v) =>
@@ -39,29 +47,3 @@ evalBindLazy env ident e =
         eval env'' e
 
     pure (Map.insert ident vThunk env)
-
-interpret ::
-  (MonadIO m, MonadError IOError m, FreeVars e, Eval m e v) =>
-  LoCoModule e ->
-  m (Env (m v))
-interpret lmod =
-  do
-    env <- interpret' lmod
-    pure $ fmap force env
-
-smallModule :: LoCoModule Expr
-smallModule =
-  LoCoModule "abc" $
-    Map.fromList
-      [ ("a", RHSExpr (ELit 1)),
-        ("b", RHSExpr (EAdd (EVar "a") (EVar "a"))),
-        ("c", RHSExpr (error "c"))
-      ]
-
-testB :: IO Int
-testB =
-  do
-    m <- interpret smallModule
-    b <- m Map.! "b"
-    a <- m Map.! "a"
-    pure (b + a)
