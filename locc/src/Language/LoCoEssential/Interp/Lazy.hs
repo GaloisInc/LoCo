@@ -16,7 +16,7 @@ interpret' ::
   (MonadIO m, MonadError IOError m, Eval m Expr Int) =>
   LoCoModule Expr ->
   m (Env (Thunk m Int))
-interpret' lmod = foldM extendEnv mempty (Map.toList lmod)
+interpret' lMod = foldM extendEnv mempty (Map.toList (lModBinds lMod))
   where
     extendEnv env (ident, rhs) =
       case rhs of
@@ -51,11 +51,12 @@ interpret lmod =
 
 smallModule :: LoCoModule Expr
 smallModule =
-  Map.fromList
-    [ ("a", RHSExpr (ELit 1)),
-      ("b", RHSExpr (EAdd (EVar "a") (EVar "a"))),
-      ("c", RHSExpr (error "c"))
-    ]
+  LoCoModule "abc" $
+    Map.fromList
+      [ ("a", RHSExpr (ELit 1)),
+        ("b", RHSExpr (EAdd (EVar "a") (EVar "a"))),
+        ("c", RHSExpr (error "c"))
+      ]
 
 testB :: IO Int
 testB =

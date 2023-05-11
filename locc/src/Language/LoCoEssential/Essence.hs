@@ -16,8 +16,10 @@ data RHS e
   | -- | Introduction form for lazy vector. The introduction form for
     -- strict vectors is encapsulated in `e`.
     RHSMap e Symbol
+  deriving (Show)
 
-type LoCoModule e = Env (RHS e)
+data LoCoModule e = LoCoModule {lModName :: Symbol, lModBinds :: Env (RHS e)}
+  deriving (Show)
 
 class FreeVars e where
   fvs :: e -> Set Symbol

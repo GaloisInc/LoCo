@@ -12,7 +12,7 @@ interpret ::
   (MonadError String m, Eval m Expr Int) =>
   LoCoModule Expr ->
   m (Env Int)
-interpret lmod = foldM extendEnv mempty (Map.toList lmod)
+interpret lMod = foldM extendEnv mempty (Map.toList (lModBinds lMod))
   where
     extendEnv env (ident, rhs) =
       case rhs of

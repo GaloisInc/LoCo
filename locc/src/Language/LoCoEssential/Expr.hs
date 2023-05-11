@@ -13,6 +13,7 @@ data Expr
   = ELit Int
   | EVar Symbol
   | EAdd Expr Expr
+  deriving (Show)
 
 evaluate :: Env Int -> Expr -> Either String Int
 evaluate env expr =
