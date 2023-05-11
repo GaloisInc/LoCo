@@ -13,9 +13,9 @@ import Language.LoCoEssential.Expr
 import Language.LoCoEssential.Thunk
 
 interpret' ::
-  (MonadIO m, MonadError IOError m, Eval m Expr Int) =>
-  LoCoModule Expr ->
-  m (Env (Thunk m Int))
+  (MonadIO m, FreeVars e, MonadError IOError m, Eval m e v) =>
+  LoCoModule e ->
+  m (Env (Thunk m v))
 interpret' lMod = foldM extendEnv mempty (Map.toList (lModBinds lMod))
   where
     extendEnv env (ident, rhs) =
@@ -24,11 +24,11 @@ interpret' lMod = foldM extendEnv mempty (Map.toList (lModBinds lMod))
         RHSMap e s -> throwError $ userError "can't do lazy vectors yet"
 
 evalBindLazy ::
-  (MonadIO m, Eval m Expr Int) =>
-  Env (Thunk m Int) ->
+  (MonadIO m, FreeVars e, Eval m e v) =>
+  Env (Thunk m v) ->
   Symbol ->
-  Expr ->
-  m (Env (Thunk m Int))
+  e ->
+  m (Env (Thunk m v))
 evalBindLazy env ident e =
   do
     vThunk <- delay $
@@ -41,9 +41,9 @@ evalBindLazy env ident e =
     pure (Map.insert ident vThunk env)
 
 interpret ::
-  (MonadIO m, MonadError IOError m, Eval m Expr Int) =>
-  LoCoModule Expr ->
-  m (Env (m Int))
+  (MonadIO m, MonadError IOError m, FreeVars e, Eval m e v) =>
+  LoCoModule e ->
+  m (Env (m v))
 interpret lmod =
   do
     env <- interpret' lmod

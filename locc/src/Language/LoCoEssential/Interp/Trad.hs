@@ -6,12 +6,11 @@ import Control.Monad
 import Control.Monad.Except
 import Data.Map qualified as Map
 import Language.LoCoEssential.Essence
-import Language.LoCoEssential.Expr
 
 interpret ::
-  (MonadError String m, Eval m Expr Int) =>
-  LoCoModule Expr ->
-  m (Env Int)
+  (MonadError String m, Eval m e v) =>
+  LoCoModule e ->
+  m (Env v)
 interpret lMod = foldM extendEnv mempty (Map.toList (lModBinds lMod))
   where
     extendEnv env (ident, rhs) =
@@ -20,11 +19,11 @@ interpret lMod = foldM extendEnv mempty (Map.toList (lModBinds lMod))
         RHSMap e s -> throwError "can't do lazy vectors yet"
 
 evalBind ::
-  Eval m Expr Int =>
-  Env Int ->
+  Eval m e v =>
+  Env v ->
   Symbol ->
-  Expr ->
-  m (Env Int)
+  e ->
+  m (Env v)
 evalBind env ident e =
   do
     v <- eval env e
