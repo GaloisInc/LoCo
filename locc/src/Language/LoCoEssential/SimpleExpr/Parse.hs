@@ -29,12 +29,12 @@ Expr -> Lit Expr'
 Expr' -> '+' Expr Expr' | epsilon
 -}
 
-expr :: Parser Expr
-expr =
+parseExpr :: Parser Expr
+parseExpr =
   choice
-    [ eLit >>= expr',
-      eVar >>= expr',
-      parenthesized expr >>= expr'
+    [ eLit >>= parseExpr',
+      eVar >>= parseExpr',
+      parenthesized parseExpr >>= parseExpr'
     ]
 
 eLit :: Parser Expr
@@ -43,8 +43,8 @@ eLit = ELit <$> integer
 eVar :: Parser Expr
 eVar = EVar <$> symbol
 
-expr' :: Expr -> Parser Expr
-expr' e =
+parseExpr' :: Expr -> Parser Expr
+parseExpr' e =
   choice
     [ eAdd' e,
       pure e
@@ -54,8 +54,8 @@ eAdd' :: Expr -> Parser Expr
 eAdd' e1 =
   do
     void (single '+')
-    e2 <- expr
-    expr' (EAdd e1 e2)
+    e2 <- parseExpr
+    parseExpr' (EAdd e1 e2)
 
 -------------------------------------------------------------------------------
 
