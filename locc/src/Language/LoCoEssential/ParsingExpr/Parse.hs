@@ -2,13 +2,14 @@
 
 module Language.LoCoEssential.ParsingExpr.Parse where
 
+import Control.Applicative (Applicative (liftA2))
 import Control.Monad (void)
 import Data.Char (isAscii)
 import Data.Text (Text)
 import Data.Vector qualified as V
 import Data.Void (Void)
 import Language.LoCoEssential.ParsingExpr.Expr
-import Language.LoCoEssential.SimpleExpr.Parse (integer, parenthesized, symbol)
+import Language.LoCoEssential.SimpleExpr.Parse (ignore, integer, parenthesized, symbol, ws)
 import Text.Megaparsec
 import Text.Megaparsec.Char (string)
 
@@ -70,9 +71,10 @@ parseExpr =
       eVar >>= parseExpr',
       parenthesized parseExpr >>= parseExpr'
     ]
+    <* ws
 
 eLit :: Parser Expr
-eLit = ELit <$> value
+eLit = ELit <$> value <* ws
 
 value :: Parser Value
 value =
@@ -80,53 +82,58 @@ value =
     [ vInt,
       vString
     ]
+    <* ws
 
 vInt :: Parser Value
-vInt = VInt <$> integer
+vInt = VInt <$> integer <* ws
 
 vString :: Parser Value
-vString = VString . V.fromList <$> str
+vString = VString . V.fromList <$> str <* ws
 
 str :: Parser String
-str = quoted (many (satisfy (\c -> c /= '"' && isAscii c)))
+str = quoted (many (satisfy nonQuote)) <* ws
+  where
+    nonQuote = liftA2 (&&) (/= '"') isAscii
 
 -- identifier
 eVar :: Parser Expr
-eVar = EVar <$> symbol
+eVar = EVar <$> symbol <* ws
 
 -- load("<filepath>")
 eLoad :: Parser Expr
 eLoad =
   do
-    void (string "load")
-    ELoad <$> parenthesized str
+    ignore (string "load")
+    ELoad <$> parenthesized str <* ws
 
 -- R(<e>, <e>)
 eRegion :: Parser Expr
 eRegion =
   do
-    void (single 'R')
+    ignore (single 'R')
     (e1, e2) <- parenthesized $
       do
         e1 <- parseExpr
         void (single ',')
         e2 <- parseExpr
         pure (e1, e2)
+    ws
     pure (ERegion e1 e2)
 
 -- parse(<ty>, <input>, <loc>)
 eParse :: Parser Expr
 eParse =
   do
-    void (string "parse")
+    ignore (string "parse")
     (ty, input, loc) <- parenthesized $
       do
         ty <- parseParseTy
-        void (single ',')
+        ignore (single ',')
         input <- parseExpr
-        void (single ',')
+        ignore (single ',')
         loc <- parseExpr
         pure (ty, input, loc)
+    ws
     pure (EParse ty input loc)
 
 parseParseTy :: Parser ParseTy
@@ -134,9 +141,10 @@ parseParseTy =
   choice
     [ Integer <$ string "int"
     ]
+    <* ws
 
 quoted :: Parser a -> Parser a
-quoted = between (single '"') (single '"')
+quoted p = between (ignore (single '"')) (ignore (single '"')) p <* ws
 
 parseExpr' :: Expr -> Parser Expr
 parseExpr' e =
@@ -144,10 +152,11 @@ parseExpr' e =
     [ eAdd' e,
       pure e
     ]
+    <* ws
 
 eAdd' :: Expr -> Parser Expr
 eAdd' e1 =
   do
-    void (single '+')
+    ignore (single '+')
     e2 <- parseExpr
-    parseExpr' (EAdd e1 e2)
+    parseExpr' (EAdd e1 e2) <* ws

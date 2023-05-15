@@ -39,27 +39,27 @@ parseExpr =
       eVar >>= parseExpr',
       parenthesized parseExpr >>= parseExpr'
     ]
+    <* ws
 
 eLit :: Parser Expr
-eLit = ELit <$> integer
+eLit = ELit <$> integer <* ws
 
 eVar :: Parser Expr
-eVar = EVar <$> symbol
+eVar = EVar <$> symbol <* ws
 
 parseExpr' :: Expr -> Parser Expr
 parseExpr' e =
   choice
     [ eAdd' e,
-      e <$ ws
+      pure e
     ]
+    <* ws
 
 eAdd' :: Expr -> Parser Expr
 eAdd' e1 =
   do
-    void (single '+')
-    ws
+    ignore (single '+')
     e2 <- parseExpr
-    ws
     parseExpr' (EAdd e1 e2) <* ws
 
 -------------------------------------------------------------------------------
@@ -76,10 +76,13 @@ symbol =
     pure (c : cs)
 
 parenthesized :: Parser a -> Parser a
-parenthesized = between (single '(' >> ws) (single ')')
+parenthesized p = between (ignore (single '(')) (ignore (single ')')) p <* ws
 
 braced :: Parser a -> Parser a
-braced = between (single '{' >> ws) (single '}')
+braced p = between (ignore (single '{')) (ignore (single '}')) p <* ws
 
 ws :: Parser ()
 ws = void (many (satisfy isSpace))
+
+ignore :: Parser a -> Parser ()
+ignore p = void p >> ws
