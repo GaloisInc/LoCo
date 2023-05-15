@@ -22,7 +22,7 @@ evaluate env expr =
     EVar s ->
       case env Map.!? s of
         Just v -> pure v
-        Nothing -> throwError "variable not found"
+        Nothing -> throwError ("variable "<>s<>" not found")
     EAdd e1 e2 ->
       do
         v1 <- evaluate env e1

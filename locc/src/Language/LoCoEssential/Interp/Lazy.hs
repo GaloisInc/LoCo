@@ -15,16 +15,19 @@ interpret ::
   (MonadIO m, MonadError IOError m, FreeVars e, Eval m e v) =>
   LoCoModule e ->
   m (Env (m v))
-interpret lmod =
+interpret lMod =
   do
-    env <- interpret' lmod
+    env <- interpret' lMod
     pure $ fmap force env
 
 interpret' ::
   (MonadIO m, FreeVars e, MonadError IOError m, Eval m e v) =>
   LoCoModule e ->
   m (Env (Thunk m v))
-interpret' lMod = foldM extendEnv mempty (Map.toList (lModBinds lMod))
+interpret' lMod = 
+  case orderedBinds lMod of
+    Nothing -> throwError $ userError "cycle"
+    Just env -> foldM extendEnv mempty env
   where
     extendEnv env (ident, rhs) =
       case rhs of

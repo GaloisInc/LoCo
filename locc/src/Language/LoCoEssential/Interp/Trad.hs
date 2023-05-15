@@ -8,18 +8,21 @@ import Data.Map qualified as Map
 import Language.LoCoEssential.Essence
 
 interpret ::
-  (MonadError String m, Eval m e v) =>
+  (MonadError IOError m, Eval m e v, FreeVars e) =>
   LoCoModule e ->
   m (Env v)
-interpret lMod = foldM extendEnv mempty (Map.toList (lModBinds lMod))
+interpret lMod =
+  case orderedBinds lMod of
+    Nothing -> throwError $ userError "cycle"
+    Just env -> foldM extendEnv mempty env
   where
     extendEnv env (ident, rhs) =
       case rhs of
         RHSExpr e -> evalBind env ident e
-        RHSMap e s -> throwError "can't do lazy vectors yet"
+        RHSMap e s -> throwError $ userError "can't do lazy vectors yet"
 
 evalBind ::
-  Eval m e v =>
+  (MonadError IOError m, Eval m e v) =>
   Env v ->
   Symbol ->
   e ->
