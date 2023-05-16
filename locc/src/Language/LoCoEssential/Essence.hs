@@ -3,7 +3,10 @@
 module Language.LoCoEssential.Essence where
 
 import Data.Map (Map)
+import Data.Map qualified as Map
 import Data.Set (Set)
+import Data.Set qualified as Set
+import Language.LoCo.Toposort (topoSortPossibly)
 
 type Symbol = String
 
@@ -21,8 +24,20 @@ data RHS e
 data LoCoModule e = LoCoModule {lModName :: Symbol, lModBinds :: Env (RHS e)}
   deriving (Show)
 
+orderedBinds :: (FreeVars e) => LoCoModule e -> Maybe [(Symbol, RHS e)]
+orderedBinds lMod =
+  case topoSortPossibly (Map.toList (Set.toList . fvs <$> lModBinds lMod)) of
+    Nothing -> Nothing
+    Just vs -> Just $ reverse [(v, lModBinds lMod Map.! v) | v <- vs]
+
 class FreeVars e where
   fvs :: e -> Set Symbol
+
+instance FreeVars e => FreeVars (RHS e) where
+  fvs rhs =
+    case rhs of
+      RHSExpr e -> fvs e
+      RHSMap e _ -> fvs e
 
 class Monad m => Eval m expr value | expr -> value where
   eval :: Env value -> expr -> m value
