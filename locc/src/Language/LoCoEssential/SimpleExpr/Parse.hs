@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Language.LoCoEssential.SimpleExpr.Parse where
 
 import Control.Monad (void)
@@ -64,10 +65,10 @@ eAdd' e1 =
 
 -------------------------------------------------------------------------------
 
-integer :: Parser Int
+integer :: MonadParsec error Text m => m Int
 integer = read <$> some (satisfy isNumber) <* ws
 
-symbol :: Parser Symbol
+symbol :: MonadParsec error Text m => m Symbol
 symbol =
   do
     c <- satisfy isLower
@@ -75,14 +76,14 @@ symbol =
     ws
     pure (c : cs)
 
-parenthesized :: Parser a -> Parser a
+parenthesized :: MonadParsec error Text m => m a -> m a
 parenthesized p = between (ignore (single '(')) (ignore (single ')')) p <* ws
 
-braced :: Parser a -> Parser a
+braced :: MonadParsec error Text m => m a -> m a
 braced p = between (ignore (single '{')) (ignore (single '}')) p <* ws
 
-ws :: Parser ()
+ws :: MonadParsec error Text m => m ()
 ws = void (many (satisfy isSpace))
 
-ignore :: Parser a -> Parser ()
+ignore :: MonadParsec error Text m => m a -> m ()
 ignore p = void p >> ws
