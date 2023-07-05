@@ -3,9 +3,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# HLINT ignore "Use newtype instead of data" #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# HLINT ignore "Use newtype instead of data" #-}
 {-# HLINT ignore "Replace case with maybe" #-}
 
 module Language.LoCoV2.Parser where
@@ -101,9 +101,18 @@ access (Format binds) bind =
 
 -- | Evaluate an Expr to a sort of WHNF.
 eval :: Monad m => Expr -> ParserT m Value
-eval e =
-  case e of
+eval expr =
+  case expr of
     ELit l -> pure (VLit l)
+    EPrim p -> pure (VPrim p)
+    EVar v -> undefined
+    EApp e es ->
+      eval e >>= \case
+        VPrim p -> applyPrim p es
+        _ -> throwError "can't apply a non-primitive"
+
+applyPrim :: Monad m => Primitive -> [Expr] -> ParserT m Value
+applyPrim primitive arguments = undefined
 
 -- Preliminary: this can work for some circumstances, but doesn't differentiate
 -- between expressions evaluated at different regions. Is this needed?

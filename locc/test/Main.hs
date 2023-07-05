@@ -35,6 +35,7 @@ lazyMatchesTraditional lMod =
     lazyMod <- sequence lazyModThunks
     pure (Map.toList tradMod == Map.toList lazyMod)
 
+-- | `Expr`s generated via this instance may have unbound variables.
 instance Arbitrary Simple.Expr where
   -- EAdd: 40%
   -- ELit: 30%
