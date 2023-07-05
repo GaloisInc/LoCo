@@ -6,19 +6,25 @@ import Data.Map (Map)
 import Data.Text (Text)
 import Language.Haskell.TH (Exp)
 
-data NamedEnv e = NamedEnv {neName :: Symbol, neEnv :: Env e}
+data ModuleDecl = ModuleDecl
+  { modTyName :: Symbol,
+    modTy :: Maybe Type,
+    modName :: Symbol,
+    modEnv :: Env Exp
+  }
   deriving (Show)
 
-data OptimalModule = OptimalModule {pmTy :: Symbol, pmEnv :: NamedEnv Exp}
+data TypeDecl = TypeDecl
+  { tdName :: Symbol,
+    tdType :: Type
+  }
   deriving (Show)
 
-newtype OptimalTypeDecl = OptimalTypeDecl (NamedEnv OptimalType)
-  deriving (Show)
-
-data OptimalType
+data Type
   = Bool
   | Char
-  | Ctor Symbol
+  | Alias Symbol
+  | Rec (Env Type)
   deriving (Show)
 
 type Symbol = Text

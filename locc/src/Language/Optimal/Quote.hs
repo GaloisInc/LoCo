@@ -7,26 +7,26 @@ import Data.List (isPrefixOf)
 import Data.Text qualified as Text
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
-import Language.Optimal.Compile (compileOptimalModule, compileOptimalTypeDecl)
-import Language.Optimal.Parse (fromText, parseOptimalModule, parseOptimalTypeDecl)
-import Text.Megaparsec
+import Language.Optimal.Compile (compileOptimalModuleDecl, compileOptimalTypeDecl)
+import Language.Optimal.Parse (parseOptimal)
 
 optimal :: QuasiQuoter
 optimal =
   QuasiQuoter
     { quoteDec = decls,
-      quoteExp = undefined,
-      quotePat = undefined,
-      quoteType = undefined
+      quoteExp = \_ -> fail "cannot use `optimal` in expression contexts",
+      quotePat = \_ -> fail "cannot use `optimal` in pattern contexts",
+      quoteType = \_ -> fail "cannot use `optimal` in type contexts"
     }
 
 decls :: String -> Q [Dec]
 decls src =
   do
-    ds <- either fail pure parsed
-    concat <$> mapM (either compileOptimalTypeDecl compileOptimalModule) ds
+    (tyDecls, modDecls) <- either fail pure (parseOptimal (Text.pack src'))
+    tyQDecs <- mapM compileOptimalTypeDecl tyDecls
+    modQDecs <- mapM compileOptimalModuleDecl modDecls
+    pure $ concat (tyQDecs ++ modQDecs)
   where
-    parsed = fromText (many (eitherP parseOptimalTypeDecl parseOptimalModule)) (Text.pack src')
     src' = stripComments "--" src
 
 stripComments :: String -> String -> String

@@ -1,17 +1,16 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Language.Optimal.Parse where
 
-import Control.Monad (void, when)
-import Data.Char (isAlphaNum, isLower, isSpace, isUpper)
-import Data.List.NonEmpty (NonEmpty, fromList)
-import Data.List.NonEmpty qualified as NE
+import Control.Applicative (Alternative)
+import Control.Monad (MonadPlus)
+import Data.Char (isAlphaNum, isLower, isUpper)
+import Data.Either (partitionEithers)
 import Data.Map qualified as Map
-import Data.Set qualified as Set
-import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Void (Void)
@@ -20,42 +19,67 @@ import Language.Haskell.TH (Exp)
 import Language.LoCoEssential.Essence ()
 import Language.LoCoEssential.SimpleExpr.Parse (braced, ignore, ws)
 import Language.Optimal.Syntax
-import Text.Megaparsec
+import Text.Megaparsec hiding (runParser)
+import Text.Megaparsec qualified as Megaparsec
 
-type Parser v =
-  Parsec
-    Void -- error type
-    Text -- input type
-    v
+newtype Parser a = Parser {unParser :: Parsec Void Text a}
+  deriving
+    ( Functor,
+      Applicative,
+      Monad,
+      Alternative,
+      MonadPlus,
+      MonadParsec Void Text
+    )
 
-fromText :: Parser e -> Text -> Either String e
-fromText parser text =
-  case runParser (ws >> parser) "<stdin>" text of
+runParser :: Parser a -> Text -> Either String a
+runParser (Parser parser) text =
+  case Megaparsec.runParser (ws >> parser) "<stdin>" text of
     Left errBundle -> Left (errorBundlePretty errBundle)
-    Right m -> pure m
+    Right res -> pure res
 
 -------------------------------------------------------------------------------
 
-parseOptimalModule :: Parser OptimalModule
-parseOptimalModule =
+parseOptimal :: Text -> Either String ([TypeDecl], [ModuleDecl])
+parseOptimal text =
   do
-    (name, ty) <- parseBinop parseVarName (single ':') parseTyName
-    (name', env) <- parseBinop (chunk name) (single '=') (parseExprBindings parseHSExpr)
-    pure (OptimalModule {pmTy = ty, pmEnv = NamedEnv name env})
+    decls <- runParser (many (eitherP parseOptimalTypeDecl parseOptimalModuleDecl)) text
+    let (typeDecls, moduleDecls) = partitionEithers decls
+        tyEnv = Map.fromList [(tdName, td) | td@TypeDecl {..} <- typeDecls]
+    typedModuleDecls <- expandTypes tyEnv moduleDecls
+    pure (typeDecls, typedModuleDecls)
 
-parseOptimalTypeDecl :: Parser OptimalTypeDecl
+expandTypes :: Env TypeDecl -> [ModuleDecl] -> Either String [ModuleDecl]
+expandTypes types = mapM expandType
+  where
+    expandType ModuleDecl {..} =
+      case types Map.!? modTyName of
+        Nothing -> Left $ "couldn't find type for " <> show modName
+        Just TypeDecl {..} -> Right ModuleDecl {modTy = Just tdType, ..}
+
+-------------------------------------------------------------------------------
+
+parseOptimalModuleDecl :: Parser ModuleDecl
+parseOptimalModuleDecl =
+  do
+    (modName, tyName) <- parseBinop parseVarName (single ':') parseTyName
+    (modName', binds) <- parseBinop (chunk modName) (single '=') (parseExprBindings parseHSExpr)
+    pure ModuleDecl {modTyName = tyName, modTy = Nothing, modName = modName', modEnv = binds}
+
+parseOptimalTypeDecl :: Parser TypeDecl
 parseOptimalTypeDecl =
   do
     ignore (chunk "type")
-    (name, env) <- parseBinop parseTyName (single '=') (parseTypeBindings parseOptimalType)
-    pure (OptimalTypeDecl (NamedEnv name env))
+    (name, ty) <- parseBinop parseTyName (single '=') parseOptimalType
+    pure TypeDecl {tdName = name, tdType = ty}
 
-parseOptimalType :: Parser OptimalType
+parseOptimalType :: Parser Type
 parseOptimalType =
   choice
     [ Bool <$ chunk "Bool",
       Char <$ chunk "Char",
-      Ctor <$> parseTyName
+      Alias <$> parseTyName,
+      Rec <$> parseTypeBindings parseOptimalType
     ]
 
 -------------------------------------------------------------------------------
@@ -66,7 +90,7 @@ parseHSExpr =
     ignore (chunk left)
     str <- manyTill anySingle (chunk right)
     case parseExp str of
-      Left err -> error "parse error"
+      Left err -> error $ "parse error: " <> err
       Right expr -> pure expr
   where
     (left, right) = ("<|", "|>")

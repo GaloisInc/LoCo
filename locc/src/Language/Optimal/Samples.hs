@@ -21,18 +21,7 @@ facilePrimalityTest n = and [n `mod` i /= 0 | i <- [2 .. n `div` 2]]
 -------------------------------------------------------------------------------
 
 [optimal|
-type Foo = { a : Bool, b : Char }
-|]
-
--- data Foo = Foo
---   { a :: Thunked Bool,
---     b :: Thunked Char
---   }
-
-[optimal|
 type Bar = { fooField : Foo, b2 : Bool }
-
-
 |]
 
 -- data Bar = Bar
@@ -41,12 +30,19 @@ type Bar = { fooField : Foo, b2 : Bool }
 --   }
 
 [optimal|
+type Foo = { a : Bool, b : Char }
+
 foo : Foo
 foo = { 
   a = <| pure (facilePrimalityTest smallerPrime) |>,
   b = <| pure (if a then 't' else 'f') |>
 }
 |]
+
+-- data Foo = Foo
+--   { a :: Thunked Bool,
+--     b :: Thunked Char
+--   }
 
 -- foo :: IO Foo
 -- foo =
@@ -76,9 +72,9 @@ type Offset = Int
 
 type Length = Int
 
-data Header = Header [(Offset, Length)]
+newtype TableEntries = TableEntries [TableEntry]
 
-data Entries = Entries [[Word8]]
+data TableEntry = TableEntry {entryOffset :: Int, entryLength :: Int, entryData :: [Word8]}
 
 chunk :: Int -> [a] -> [[a]]
 chunk chunkSize original =
@@ -98,13 +94,18 @@ takeMaybe len xs =
     (z : zs) -> (z :) <$> takeMaybe (len - 1) zs
 
 [optimal|
-type ICC = { fileText : String, tableSize : Int, table : Header, entries : Entries }
+type ICC = { fileText : String, tableSize : Int, tableEntries : TableEntries }
 
 icc : ICC
 icc = {
-  fileText  = <| readFile "icc.txt" |>,
-  tableSize = <| pure (read (take 2 fileText)) |>,
-  table     = <| let {body = drop 2 fileText; chunks = chunk tableSize body} in undefined |>
+  fileText  = <| putStrLn "fileText" >> readFile "icc.txt" |>,
+  tableSize = <| putStrLn "tableSize" >> pure (read (take 2 fileText)) |>,
+  unusedField = <| putStrLn "unusedField" |>,
+  tableEntries = <|
+let body = drop 2 fileText
+    chunks = chunk tableSize body
+in  unusedField `seq` pure (TableEntries [])
+|>
   
 }
 |]

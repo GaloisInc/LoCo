@@ -2,7 +2,6 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Language.Optimal.Compile where
@@ -14,11 +13,13 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Language.Haskell.TH
+import Language.Haskell.TH qualified as TH
 import Language.LoCo.Toposort (topoSortPossibly)
 import Language.Optimal.Syntax
+import Language.Optimal.Syntax qualified as Optimal
 
-compileOptimalModule :: OptimalModule -> Q [Dec]
-compileOptimalModule (OptimalModule modTy (NamedEnv modName modEnv)) =
+compileOptimalModuleDecl :: ModuleDecl -> Q [Dec]
+compileOptimalModuleDecl ModuleDecl {..} =
   do
     orderedModNames <-
       reverse
@@ -28,10 +29,14 @@ compileOptimalModule (OptimalModule modTy (NamedEnv modName modEnv)) =
               let fvs = Set.toList (freeVars expr `Set.intersection` modBinds)
           ]
     binds <- sequence [compileBind modBinds name (modNameEnv Map.! name) | name <- orderedModNames]
-    ret <- compileRet (mkName' modTy) modBinds
-    let body = DoE Nothing (binds <> [ret])
+    recConstr <- case modTy of
+      Just (Rec tyEnv) -> compileRecConstr (mkName' modTyName) tyEnv
+      Just _ -> fail ""
+      Nothing -> fail ""
+    result <- noBindS [|pure $(pure recConstr)|]
+    let body = DoE Nothing (binds <> [result])
         decl = FunD funName [Clause mempty (NormalB body) mempty]
-    sig <- sigD funName [t|IO $(conT (mkName' modTy))|]
+    sig <- sigD funName [t|IO $(conT (mkName' modTyName))|]
     pure [sig, decl]
   where
     funName = mkName' modName
@@ -72,12 +77,30 @@ compileRet modTyName modBinds = noBindS [|pure $(recConE modTyName recBinds)|]
         | modVarName <- Set.toList modBinds
       ]
 
-compileOptimalTypeDecl :: OptimalTypeDecl -> Q [Dec]
-compileOptimalTypeDecl (OptimalTypeDecl (NamedEnv recName recFields)) = sequence [decl]
+compileRecConstr :: Name -> Env Optimal.Type -> Q Exp
+compileRecConstr tyName tyEnv =
+  let recBinds =
+        [ (modVarName, VarE modVarName)
+          | modVar <- Map.keys tyEnv,
+            let modVarName = mkName' modVar
+        ]
+   in pure (RecConE tyName recBinds)
+
+compileOptimalTypeDecl :: TypeDecl -> Q [Dec]
+compileOptimalTypeDecl (TypeDecl {tdName = tdName, tdType = tdType}) =
+  do
+    dec <-
+      case tdType of
+        Rec recFields -> compileOptimalRecordDecl (mkName' tdName) recFields
+        Alias ty -> compileOptimalTypeSynDecl (mkName' tdName) (mkName' ty)
+    pure [dec]
+
+compileOptimalRecordDecl :: Name -> Env Optimal.Type -> Q Dec
+compileOptimalRecordDecl recName recFields = decl
   where
-    decl = dataD context (mkName' recName) tyVars kind [ctor] deriv
+    decl = dataD context (recName) tyVars kind [ctor] deriv
     ctor = recC ctorName ctorFields
-    tyName = mkName' recName
+    tyName = recName
     ctorName = tyName
     ctorFields = map (uncurry mkVarBangType) (Map.toList recFields)
     mkVarBangType fieldName optimalType =
@@ -90,12 +113,15 @@ compileOptimalTypeDecl (OptimalTypeDecl (NamedEnv recName recFields)) = sequence
     deriv = mempty
     noBang = Bang NoSourceUnpackedness NoSourceStrictness
 
-compileOptimalType :: OptimalType -> Q Type
+compileOptimalTypeSynDecl :: Name -> Name -> Q Dec
+compileOptimalTypeSynDecl tdName tdAlias = tySynD tdName [] (varT tdAlias)
+
+compileOptimalType :: Optimal.Type -> Q TH.Type
 compileOptimalType pty =
   case pty of
     Bool -> [t|Bool|]
     Char -> [t|Char|]
-    Ctor s -> conT (mkName' s)
+    Alias s -> conT (mkName' s)
 
 mkName' :: Text -> Name
 mkName' = mkName . Text.unpack
@@ -259,6 +285,8 @@ renameExp f expr =
     ParensE e -> parensE (go e)
     CondE e1 e2 e3 -> condE (go e1) (go e2) (go e3)
     LetE decs e -> letE (map goDec decs) (go e)
+    UInfixE e1 e2 e3 -> uInfixE (go e1) (go e2) (go e3)
+    ListE es -> listE (map go es)
     _ -> error $ "TODO: finish constructors in `renameExp` (failed on " <> take 30 (show expr) <> "...)"
   where
     -- TODO: etc
