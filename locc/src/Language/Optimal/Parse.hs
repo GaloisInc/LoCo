@@ -47,7 +47,6 @@ parseOptimalTypeDecl :: Parser OptimalTypeDecl
 parseOptimalTypeDecl =
   do
     ignore (chunk "type")
-    ws
     (name, env) <- parseBinop parseTyName (single '=') (parseTypeBindings parseOptimalType)
     pure (OptimalTypeDecl (NamedEnv name env))
 
@@ -65,7 +64,6 @@ parseHSExpr :: Parser Exp
 parseHSExpr =
   do
     ignore (chunk left)
-    ws
     str <- manyTill anySingle (chunk right)
     case parseExp str of
       Left err -> error "parse error"
