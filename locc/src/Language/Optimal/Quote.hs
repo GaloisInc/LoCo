@@ -30,12 +30,4 @@ decls src =
     src' = stripComments "--" src
 
 stripComments :: String -> String -> String
-stripComments prefix content =
-  unlines [line | line <- lines content, not (prefix `isPrefixOf` line)]
-
-defaultDecs :: Q [Dec]
-defaultDecs =
-  [d|
-    x :: Int
-    x = 3
-    |]
+stripComments prefix = unlines . filter (not . (prefix `isPrefixOf`)) . lines
