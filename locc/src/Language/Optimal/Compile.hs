@@ -33,6 +33,11 @@ compileOptimalModule (OptimalModule modTy (NamedEnv modName modBinds)) = sequenc
 compileBind :: Set Symbol -> Symbol -> Exp -> Q Stmt
 compileBind modVars var expr = bindS (varP (mkName' var)) [|delayAction $(compileExpr modVars expr)|]
 
+-- - Collect all of the free variables in this expression that are also variables
+--   in the encompassing module
+-- - Create a do expression that:
+--   - Forces each of them
+--   - Ends with the user-provided expression
 compileExpr :: Set Symbol -> Exp -> Q Exp
 compileExpr modVars expr =
   do
@@ -50,14 +55,8 @@ compileExpr modVars expr =
       [] -> pure expr'
       _ -> pure (DoE Nothing (thunkBinds <> [NoBindS expr']))
 
--- - Collect all of the free variables in this expression that are also variables
---   in the encompassing module
--- - Create a do expression that:
---   - Forces each of them
---   - Ends with the user-provided expression
-
 compileRet :: Symbol -> Set Symbol -> Q Stmt
-compileRet modTy modBinds = noBindS (appE [|pure|] (recConE (mkName' modTy) recBinds))
+compileRet modTy modBinds = noBindS [|pure $(recConE (mkName' modTy) recBinds)|]
   where
     recBinds =
       [ pure (varName, VarE varName)
