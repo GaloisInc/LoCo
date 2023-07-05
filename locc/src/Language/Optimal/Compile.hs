@@ -14,35 +14,43 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Language.Haskell.TH
+import Language.LoCo.Toposort (topoSortPossibly)
 import Language.Optimal.Syntax
 
 compileOptimalModule :: OptimalModule -> Q [Dec]
-compileOptimalModule (OptimalModule modTy (NamedEnv modName modBinds)) = sequence [sig, decl]
+compileOptimalModule (OptimalModule modTy (NamedEnv modName modEnv)) =
+  do
+    orderedModNames <-
+      reverse
+        <$> topoSortPossibly
+          [ (mkName' var, fvs)
+            | (var, expr) <- Map.toList modEnv,
+              let fvs = Set.toList (freeVars expr `Set.intersection` modBinds)
+          ]
+    binds <- sequence [compileBind modBinds name (modNameEnv Map.! name) | name <- orderedModNames]
+    ret <- compileRet (mkName' modTy) modBinds
+    let body = DoE Nothing (binds <> [ret])
+        decl = FunD funName [Clause mempty (NormalB body) mempty]
+    sig <- sigD funName [t|IO $(conT (mkName' modTy))|]
+    pure [sig, decl]
   where
-    sig = sigD funName [t|IO $(conT (mkName' modTy))|]
-    decl = funD funName [c]
     funName = mkName' modName
-    c = clause patterns (normalB body) decls
-    body = doE (binds <> [ret])
-    binds = [compileBind modVars var expr | (var, expr) <- Map.toList modBinds]
-    ret = compileRet modTy modVars
-    modVars = Map.keysSet modBinds
-    patterns = mempty
-    decls = mempty
+    modNameEnv = Map.mapKeys mkName' modEnv
+    modBinds = Map.keysSet modNameEnv
 
-compileBind :: Set Symbol -> Symbol -> Exp -> Q Stmt
-compileBind modVars var expr = bindS (varP (mkName' var)) [|delayAction $(compileExpr modVars expr)|]
+compileBind :: Set Name -> Name -> Exp -> Q Stmt
+compileBind modBindings name expr =
+  bindS (varP name) [|delayAction $(compileExpr modBindings expr)|]
 
 -- - Collect all of the free variables in this expression that are also variables
 --   in the encompassing module
 -- - Create a do expression that:
 --   - Forces each of them
 --   - Ends with the user-provided expression
-compileExpr :: Set Symbol -> Exp -> Q Exp
-compileExpr modVars expr =
+compileExpr :: Set Name -> Exp -> Q Exp
+compileExpr modBinds expr =
   do
-    let modVarNames = Set.map mkName' modVars
-        thunkVarNames = freeVars expr `Set.intersection` modVarNames
+    let thunkVarNames = freeVars expr `Set.intersection` modBinds
     thunkVarFreshNames <- sequence (Map.fromSet (newName . show) thunkVarNames)
     thunkBinds <-
       sequence
@@ -55,13 +63,13 @@ compileExpr modVars expr =
       [] -> pure expr'
       _ -> pure (DoE Nothing (thunkBinds <> [NoBindS expr']))
 
-compileRet :: Symbol -> Set Symbol -> Q Stmt
-compileRet modTy modBinds = noBindS [|pure $(recConE (mkName' modTy) recBinds)|]
+compileRet :: Name -> Set Name -> Q Stmt
+compileRet modTyName modBinds = noBindS [|pure $(recConE modTyName recBinds)|]
   where
+    recBinds :: [Q FieldExp]
     recBinds =
-      [ pure (varName, VarE varName)
-        | modVar <- Set.toList modBinds,
-          let varName = mkName' modVar
+      [ pure (modVarName, VarE modVarName)
+        | modVarName <- Set.toList modBinds
       ]
 
 compileOptimalTypeDecl :: OptimalTypeDecl -> Q [Dec]
