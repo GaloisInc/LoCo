@@ -9,18 +9,8 @@ import Data.Word (Word64, Word8)
 import Language.Optimal.Quote (optimal)
 import Thunk.RefVal (Thunked, delayAction, force)
 
-largePrime :: Word64
-largePrime = 2 ^ (63 :: Word8) - 25
-
-smallerPrime :: Word64
-smallerPrime = 2 ^ (24 :: Word8) - 3
-
-facilePrimalityTest :: Word64 -> Bool
-facilePrimalityTest n = and [n `mod` i /= 0 | i <- [2 .. n `div` 2]]
-
 {- mtg
- - nested structures
- - ?
+ - nested structures not supported
 -}
 
 ---------------------------------------------------------------------------
@@ -38,8 +28,8 @@ type LoCo1 = { l1a : T, l1b : String }
 
 m1 : LoCo1
 m1 = { 
-  l1a = <| pure $ T 500 |>,
-  l1b = <| f l1a |>
+  l1a = <| putStrLn "l1a" >> pure (T 500) |>,
+  l1b = <| putStrLn "l1b" >> f l1a |>
 }
 |]
 
@@ -48,14 +38,32 @@ m1 = {
 
 userCode1a :: IO (T,String)
 userCode1a =
-    do
-    m1' <- m1
-    l1a' <- force (l1a m1')
-    l1b' <- force (l1b m1')
-    return (l1a', l1b')
+  do
+  m1' <- m1
+  l1a' <- force (l1a m1')
+  _    <- force (l1a m1')
+  l1b' <- force (l1b m1')
+  return (l1a', l1b')
+
+userCode1b =
+  do
+  m1'  <- m1
+  l1b' <- force (l1b m1')
+  _    <- force (l1b m1')
+  return l1b'
   
 ---- Foo -----------------------------------------------------------
 -- cloned from Samples.hs
+
+largePrime :: Word64
+largePrime = 2 ^ (63 :: Word8) - 25
+
+smallerPrime :: Word64
+smallerPrime = 2 ^ (24 :: Word8) - 3
+
+facilePrimalityTest :: Word64 -> Bool
+facilePrimalityTest n = and [n `mod` i /= 0 | i <- [2 .. n `div` 2]]
+
 
 [optimal|
 type Foo = { a : Bool, b : Char }
