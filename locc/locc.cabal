@@ -26,6 +26,7 @@ library
         Language.Optimal.Parse
         Language.Optimal.Quote
         Language.Optimal.Samples
+        Language.Optimal.Samples2
         Language.Optimal.Syntax
 
         Language.LoCoEssential.Driver
