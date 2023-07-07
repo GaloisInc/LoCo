@@ -203,11 +203,28 @@ expFreeVars bindings expr =
     MultiIfE matches -> foldMap (\(guard, e) -> undefined guard <> goExp e) matches
     ListE es -> foldMap goExp es
     LetE decs e -> foldMap goDec decs <> goExp' (foldMap decBindings decs) e
-    _ -> error (show expr)
+    CaseE e matches -> goExp e <> foldMap goMatch matches
+    _ -> error $ "TODO: finish constructors in `expFreeVars` (failed on " <> take 30 (show expr) <> "...)"
   where
     goExp = expFreeVars bindings
     goExp' bindings' = expFreeVars (bindings' <> bindings)
     goDec = decFreeVars bindings
+    goMatch = matchFreeVars bindings
+
+matchFreeVars :: BindingVars -> Match -> FreeVars
+matchFreeVars bindings mtch =
+  case mtch of
+    Match pat bod decs ->
+      let bindings' = patBindings pat <> foldMap decBindings decs <> bindings
+       in bodyFreeVars bindings' bod
+
+bodyFreeVars :: BindingVars -> Body -> FreeVars
+bodyFreeVars bindings bod =
+  case bod of
+    NormalB e -> expFreeVars bindings e
+    GuardedB gs ->
+      let (guards, exps) = unzip gs
+       in foldMap (guardFreeVars bindings) guards <> foldMap (expFreeVars bindings) exps
 
 guardFreeVars :: BindingVars -> Guard -> FreeVars
 guardFreeVars bindings guard =
@@ -287,12 +304,21 @@ renameExp f expr =
     LetE decs e -> letE (map goDec decs) (go e)
     UInfixE e1 e2 e3 -> uInfixE (go e1) (go e2) (go e3)
     ListE es -> listE (map go es)
+    CaseE e matches -> caseE (go e) (map goMatch matches)
     _ -> error $ "TODO: finish constructors in `renameExp` (failed on " <> take 30 (show expr) <> "...)"
   where
     -- TODO: etc
 
     go = renameExp f
     goDec = renameDec f
+    goMatch = renameMatch f
+
+renameMatch :: (Name -> Q Name) -> Match -> Q Match
+renameMatch f m =
+  case m of
+    Match pat (NormalB expr) decs -> 
+      match (renamePat f pat) (normalB (renameExp f expr)) (map (renameDec f) decs)
+    _ -> error $ "TODO: finish constructors in `renameMatch` (failed on " <> take 30 (show m) <> "...)"
 
 renameDec :: (Name -> Q Name) -> Dec -> Q Dec
 renameDec f dec =
@@ -305,6 +331,11 @@ renamePat f pat =
   case pat of
     LitP l -> litP l
     VarP n -> VarP <$> f n
+    ConP ctor tyArgs patArgs ->
+      ConP
+        <$> f ctor
+        <*> pure tyArgs -- shouldn't need to rename types...
+        <*> mapM (renamePat f) patArgs
     _ -> error $ "TODO: finish constructors in `renamePat` (failed on " <> take 30 (show pat) <> "...)"
 
 -- TupP ps -> foldMap patBindings ps
