@@ -18,39 +18,55 @@ import Thunk.RefVal (Thunked, delayAction, force)
 data T = T Int
          deriving (Eq,Ord,Read,Show)
 
-f l1a = case l1a of T n -> pure $ show n
-
--- type LoCo1 = { l1_a : T, l1_b : String }
---  FIXME: optimal doesn't support "_"s in label names.
-
 [optimal|
-type LoCo1 = { l1a : T, l1b : String }
+type LoCo1 = { l1_a : T, l1_b : String }
 
 m1 : LoCo1
 m1 = { 
-  l1a = <| putStrLn "l1a" >> pure (T 500) |>,
-  l1b = <| putStrLn "l1b" >> f l1a |>
+  l1_a = <| putStrLn "l1_a" >> pure (T 500) |>,
+  l1_b = <| putStrLn "l1_b" >> case l1_a of T n -> pure (show n) |>
 }
 |]
 
---  FIXME: if I inline "f l1a" above, I get this
---   Exception when trying to run compile-time code: ...
+---------------------------------------------------------------------------
+-- using/testing
 
 userCode1a :: IO (T,String)
 userCode1a =
   do
   m1' <- m1
-  l1a' <- force (l1a m1')
-  _    <- force (l1a m1')
-  l1b' <- force (l1b m1')
-  return (l1a', l1b')
+  l1_a' <- force (l1_a m1')
+  _    <- force (l1_a m1')
+  l1_b' <- force (l1_b m1')
+  return (l1_a', l1_b')
 
 userCode1b =
   do
   m1'  <- m1
-  l1b' <- force (l1b m1')
-  _    <- force (l1b m1')
-  return l1b'
+  l1_b' <- force (l1_b m1')
+  _    <- force (l1_b m1')
+  return l1_b'
+
+
+---------------------------------------------------------------------------
+
+l2a' = pure (T 500) :: IO T
+l2b' :: T -> IO String
+l2b' = f
+
+-- NOTE: if we replace IO with Maybe in last two defns (would type check),
+-- then the below 'optimal' fails with a type-mismatch error: good.
+
+[optimal|
+type LoCo2 = { l2a : T, l2b : String }
+
+m2 : LoCo2
+m2 = { 
+  l2a = <| l2a' |>,
+  l2b = <| l2b' l2a |>
+}
+|]
+
   
 ---- Foo -----------------------------------------------------------
 -- cloned from Samples.hs
