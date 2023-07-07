@@ -131,9 +131,11 @@ parseVarName :: MonadParsec error Text m => m Symbol
 parseVarName =
   do
     c <- satisfy isLower
-    cs <- many (satisfy isAlphaNum)
+    cs <- many (satisfy validIdentifierChar)
     ws
     pure (Text.pack (c : cs))
+  where
+    validIdentifierChar c = isAlphaNum c || c == '_'
 
 parseTyName :: MonadParsec error Text m => m Symbol
 parseTyName =
