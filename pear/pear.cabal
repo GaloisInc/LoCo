@@ -33,8 +33,9 @@ common common
         RecordWildCards
         TypeApplications
 
-    default-language: Haskell2010
-
+    default-language: GHC2021
+    -- really want? if so, probably some LANGUAGE pragmas to remove.
+    
 library
     import: common
     
@@ -44,6 +45,8 @@ library
         Language.PEAR.Region.API
         Language.PEAR.Region.Implem
         Language.PEAR.Region.Test
+        Language.PEAR.Primitives
+        Language.PEAR.Types
         Language.PEAR.Util
         
         Language.OptimalPEAR.Examples.Trivial
@@ -51,7 +54,10 @@ library
     build-depends:
         base ^>=4.16.4.0,
         containers ^>=0.6.4.1,
-        locc
+        locc,
+        QuickCheck,
+        generic-arbitrary,
+        transformers
         
 test-suite pear-test
     import: common
