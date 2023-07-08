@@ -59,7 +59,8 @@ library
         text ^>=1.2.5.0,
         STMonadTrans ^>=0.4.6,
         unordered-containers ^>=0.2.19.1,
-        vector ^>=0.13.0.0
+        vector ^>=0.13.0.0,
+        transformers
 
     hs-source-dirs: src
 

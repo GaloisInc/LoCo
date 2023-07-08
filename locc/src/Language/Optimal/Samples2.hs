@@ -5,7 +5,10 @@
 
 module Language.Optimal.Samples2 where
 
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Identity
 import Data.Word (Word64, Word8)
+
 import Language.Optimal.Quote (optimal)
 import Thunk.RefVal (Thunked, delayAction, force)
 
@@ -17,6 +20,8 @@ import Thunk.RefVal (Thunked, delayAction, force)
 
 data T = T Int
          deriving (Eq,Ord,Read,Show)
+
+f l1_a = case l1_a of T n -> pure (show n)
 
 [optimal|
 type LoCo1 = { l1_a : T, l1_b : String }
@@ -46,7 +51,6 @@ userCode1b =
   l1_b' <- force (l1_b m1')
   _    <- force (l1_b m1')
   return l1_b'
-
 
 ---------------------------------------------------------------------------
 
@@ -111,11 +115,55 @@ foo = {
 userCodeFoo1 :: IO Bool
 userCodeFoo1 =
   do
-    f <- foo
-    let bField :: Thunked Char
-        bField = b f
-    bPure <- force bField
-    a <- force (a f)
+    x <- foo
+    b <- force (b x)
+    a <- force (a x)
     return a
   -- MT: hmmm: sharing more than expected: 2nd call to userCode2 is fast.
+  --  - saw in ghci; appears it's a ghci thing.
+  
+  
+---- exploring the generalization of types -------------------------
+
+-- currently generated:
+
+data Foo1 = Foo1 {a1 :: (Thunked Bool), b1 :: (Thunked Char)}
+foo1 :: IO Foo1
+foo1 = do a <- delayAction (pure (facilePrimalityTest smallerPrime))
+          b <- delayAction
+                 (do a_ag32 <- force a
+                     pure (if a_ag32 then 't' else 'f'))
+          pure Foo1 {a1 = a, b1 = b}
+
+-- TODO:FEATURE-REQUEST
+-- want this to be generated:
+
+foo2 :: MonadIO m => m Foo1
+foo2 = do a <- delayAction' (pure (facilePrimalityTest smallerPrime))
+          b <- delayAction'
+                 (do a_ag32 <- force' a
+                     pure (if a_ag32 then 't' else 'f'))
+          pure Foo1 {a1 = a, b1 = b}
+          
+          
+-- where we have these overloaded variants:
+--   (similiar to what is in tinman/LoCo/MEP/Thunk.hs)
+
+delayAction' :: MonadIO m => m a -> m (Thunked a)
+delayAction' m = error "delayAction'"
+                  
+force' :: MonadIO m => Thunked a -> m a
+force' x = error "force'"
+
+
+-- how we could use foo2:
+
+userCodeFoo2 :: IO Bool
+userCodeFoo2 =
+  do
+    x <- runIdentityT foo2
+         -- 'proof' that we can use foo2 at other MonadIO instances.
+    b <- force (b1 x)
+    a <- force (a1 x)
+    return a
   
