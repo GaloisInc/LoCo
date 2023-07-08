@@ -1,63 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Language.PEAR.Primitives
-{-
-(
-  -- | abstract monads:
-    FailM       -- FIXME: make abstract with newtype
-  , NoFlM
-  , FailT(..)
-  , NoFlT(..)
-
-  -- | types
-  , Contents
-
-  -- | latest and greatest [FIXME]
-  , runNoFlT_IO
-  
-  -- | parser types
-  , RgnPrsr_FxdWd_NoFl
-  , RgnPrsr_FxdWd_Fail
-  , RgnPrsr_DynWd_NoFl
-  , RgnPrsr_DynWd_Fail
-
-  -- | abstractions
-  , lift_NoFlM
-  , lift_FxdWd_NoFl
-  , failM
-
-  , mkPrim_FxdWd_NoFl
-  , mkPrim_DynWd_Fail
-  
-  , app_FxdWd_Fail
-  , app_FxdWd_NoFl
-  , app_DynWd_Fail
-  , app_DynWd_Fail'
-
-  , width_FxdWd_Fail
-  , widthc_DynWd_Fail
-
-  -- | monadic region operators (currently unused):
-  
-  , extractRegion_FxdWd_Fail
-  , extractRegion_DynWd_Fail
-  
-  -- | possibly failing computations
-  , check_M
-  , check_M'
-  , subRegion_M
-  , split1_M
-  
-  -- | running
-  
-  , run_RgnPrsr_FxdWd_Fail
-  , runWithWidth_RgnPrsr_FxdWd_Fail
-  , run_RgnPrsr_FxdWd_NoFl
-  , run_RgnPrsr_DynWd_Fail
-  , run_RgnPrsr_DynWd_Fail'
-  )
--}
-where  
+module Language.PEAR.Primitives where  
 
 -- base pkgs:
 import Control.Exception (assert)
@@ -93,6 +36,7 @@ type ExceptT' m a = ExceptT Errors m a
 
 type Contents = String
   -- FIXME[E2]: replace String, want constant time extraction!
+
 
 ---- explore -------------------------------------------------------
 
