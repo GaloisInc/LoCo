@@ -78,6 +78,7 @@ parseOptimalType =
   choice
     [ Bool <$ chunk "Bool",
       Char <$ chunk "Char",
+      List <$> between (ignore (single '[')) (ignore (single ']')) parseOptimalType,
       Alias <$> parseTyName,
       Rec <$> parseTypeBindings parseOptimalType
     ]
