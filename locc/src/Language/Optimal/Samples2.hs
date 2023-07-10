@@ -1,4 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+  -- alternatively we can require user to provide a signature for their
+  -- generated optimal module.
 {-# OPTIONS_GHC -ddump-splices #-}
 
 -- {-# OPTIONS_GHC -dsuppress-uniques #-}
@@ -7,6 +10,7 @@ module Language.Optimal.Samples2 where
 
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Identity
+import Control.Monad.Trans.Except
 import Data.Word (Word64, Word8)
 
 import Language.Optimal.Quote (optimal)
@@ -71,9 +75,11 @@ m2 = {
   l2a = <| l2a' |>,
   l2b = <| l2b' l2a |>
 }
+
 |]
 
-  
+m2 :: MonadIO m => m (LoCo2 m)
+
 ---- Foo -----------------------------------------------------------
 -- cloned from Samples.hs
 
@@ -96,6 +102,8 @@ foo = {
   b = <| pure (if a then 't' else 'f') |>
 }
 |]
+
+foo :: MonadIO m => m (Foo m)
 
 -- data Foo = Foo
 --   { a :: Thunked Bool,
@@ -123,54 +131,48 @@ userCodeFoo1 =
     return a
   -- MT: hmmm: sharing more than expected: 2nd call to userCode2 is fast.
   --  - saw in ghci; appears it's a ghci thing.
+
+
+---- Testing the overloaded Optimal --------------------------------
+
+
+[optimal|
+type LoCo3 = { l3a : Int, l3b : Int, l3c : Int }
+m3 : LoCo3
+m3 = { 
+     l3a = <| pure 5 |>,
+     l3b = <| if even l3a then return (l3a+1) else throwE ["odd"] |>,
+     l3c = <| pure (l3a + 2) |>
+}
+|]
+
+type E m = ExceptT [String] m
+m3 :: MonadIO m => E m (LoCo3 (E m))
+  -- NOTE: because we are giving this a signature; we might have have
+  -- dispensed with NoMonomorphismRestriction.
   
-  
----- exploring the generalization of types -------------------------
+-- functional version:
+m3_Hs :: (Monad m) => ExceptT [String] m (Int, Int)
+m3_Hs = do
+         a <- return (5 :: Int)
+         b <- if even a then return (a+1)
+                        else throwE ["odd"]
+         return (a,b)
 
--- currently generated:
-
--- data Foo1 = Foo1 {a1 :: (Thunked Bool), b1 :: (Thunked Char)}
--- foo1 :: IO Foo1
--- foo1 = do a <- delayAction (pure (facilePrimalityTest smallerPrime))
---           b <- delayAction
---                  (do a_ag32 <- force a
---                      pure (if a_ag32 then 't' else 'f'))
---           pure Foo1 {a1 = a, b1 = b}
-
--- TODO:FEATURE-REQUEST
--- want this to be generated:
-
-data Foo1 m = Foo1 {a1 :: (Thunked m Bool), b1 :: (Thunked m Char)}
-
-foo2 :: MonadIO m => m (Foo1 m)
-foo2 = do a <- delayAction' (pure (facilePrimalityTest smallerPrime))
-          b <- delayAction'
-                 (do a_ag32 <- force' a
-                     pure (if a_ag32 then 't' else 'f'))
-          pure Foo1 {a1 = a, b1 = b}
-          
-          
--- where we have these overloaded variants:
---   (similiar to what is in tinman/LoCo/MEP/Thunk.hs)
-
-delayAction' :: MonadIO m => m a -> m (Thunked m a)
-delayAction' m = error "delayAction'"
-                  
-force' :: MonadIO m => Thunked m a -> m a
-force' x = error "force'"
-
-
--- how we could use foo2:
-
--- [Sam] I think the 'proof' you want to have is more easily demonstrated by
--- wrapping the whole computation in `runIdentityT`, rather than just the `foo2`
--- computation (which would entail wrapping the `force`s similarly)
-userCodeFoo2 :: IO Bool
-userCodeFoo2 = runIdentityT $
+userCodeM3a = runExceptT $
   do
-    x <- foo2
-         -- 'proof' that we can use foo2 at other MonadIO instances.
-    b <- force (b1 x)
-    a <- force (a1 x)
-    return a
-  
+    m' <- m3
+    a <- force (l3a m')
+    -- b <- force (l3b m')
+    c <- force (l3c m')
+    a2 <- force (l3a m')
+    return (a,c)
+
+userCodeM3b = runExceptT $
+  do
+    m' <- m3
+    a <- force (l3a m')
+    c <- force (l3c m')
+    b <- force (l3b m')
+    return (a,b)
+

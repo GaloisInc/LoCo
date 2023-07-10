@@ -1,4 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+  -- alternatively we can require user to provide a signature for their
+  -- generated optimal module.
 {-# OPTIONS_GHC -ddump-splices #-}
 
 -- {-# OPTIONS_GHC -dsuppress-uniques #-}
@@ -112,6 +115,7 @@ in  unusedField `seq` pure (TableEntries [])
 }
 |]
 
+
 [optimal|
 type WithLists = { xs : [Int] }
 
@@ -121,6 +125,7 @@ withLists = {
   ys = <| mapM pure xs |>
 }
 |]
+
 
 -- table    = <| pure (Header (map (read . (:[])) (take header (drop 1 fileText)))) |>
 

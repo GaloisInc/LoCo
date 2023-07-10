@@ -40,7 +40,8 @@ compileOptimalModuleDecl ModuleDecl {..} =
         decl = FunD funName [Clause mempty (NormalB body) mempty]
     sigTy <- [t|forall m. MonadIO m => m $(appT (conT (mkName' modTyName)) [t|m|])|]
     sig <- sigD funName (pure sigTy)
-    pure [sig, decl]
+    -- pure [sig, decl]
+    pure [decl]
   where
     funName = mkName' modName
     modNameEnv = Map.mapKeys mkName' modEnv
