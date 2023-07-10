@@ -124,8 +124,6 @@ compileOptimalTypeSynDecl tdName tdAlias = tySynD tdName [] (varT tdAlias)
 compileOptimalType :: Optimal.Type -> Q TH.Type
 compileOptimalType pty =
   case pty of
-    Bool -> [t|Bool|]
-    Char -> [t|Char|]
     List ty -> [t|[$(compileOptimalType ty)]|]
     Alias s -> conT (mkName' s)
 

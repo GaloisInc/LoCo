@@ -21,10 +21,8 @@ data TypeDecl = TypeDecl
   deriving (Show)
 
 data Type
-  = Bool
-  | Char
+  = Alias Symbol
   | List Type
-  | Alias Symbol
   | Rec (Env Type)
   deriving (Show)
 
