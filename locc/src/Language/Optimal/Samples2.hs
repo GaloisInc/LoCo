@@ -28,8 +28,8 @@ type LoCo1 = { l1_a : T, l1_b : String }
 
 m1 : LoCo1
 m1 = { 
-  l1_a = <| putStrLn "l1_a" >> pure (T 500) |>,
-  l1_b = <| putStrLn "l1_b" >> case l1_a of T n -> pure (show n) |>
+  l1_a = <| liftIO (putStrLn "l1_a" >> pure (T 500) )|>,
+  l1_b = <| liftIO (putStrLn "l1_b" >> case l1_a of T n -> pure (show n)) |>
 }
 |]
 
@@ -45,6 +45,7 @@ userCode1a =
   l1_b' <- force (l1_b m1')
   return (l1_a', l1_b')
 
+userCode1b :: IO String
 userCode1b =
   do
   m1'  <- m1
@@ -54,8 +55,9 @@ userCode1b =
 
 ---------------------------------------------------------------------------
 
-l2a' = pure (T 500) :: IO T
-l2b' :: T -> IO String
+l2a' :: MonadIO m => m T
+l2a' = pure (T 500)
+l2b' :: MonadIO m => T -> m String
 l2b' = f
 
 -- NOTE: if we replace IO with Maybe in last two defns (would type check),
@@ -127,18 +129,20 @@ userCodeFoo1 =
 
 -- currently generated:
 
-data Foo1 = Foo1 {a1 :: (Thunked Bool), b1 :: (Thunked Char)}
-foo1 :: IO Foo1
-foo1 = do a <- delayAction (pure (facilePrimalityTest smallerPrime))
-          b <- delayAction
-                 (do a_ag32 <- force a
-                     pure (if a_ag32 then 't' else 'f'))
-          pure Foo1 {a1 = a, b1 = b}
+-- data Foo1 = Foo1 {a1 :: (Thunked Bool), b1 :: (Thunked Char)}
+-- foo1 :: IO Foo1
+-- foo1 = do a <- delayAction (pure (facilePrimalityTest smallerPrime))
+--           b <- delayAction
+--                  (do a_ag32 <- force a
+--                      pure (if a_ag32 then 't' else 'f'))
+--           pure Foo1 {a1 = a, b1 = b}
 
 -- TODO:FEATURE-REQUEST
 -- want this to be generated:
 
-foo2 :: MonadIO m => m Foo1
+data Foo1 m = Foo1 {a1 :: (Thunked m Bool), b1 :: (Thunked m Char)}
+
+foo2 :: MonadIO m => m (Foo1 m)
 foo2 = do a <- delayAction' (pure (facilePrimalityTest smallerPrime))
           b <- delayAction'
                  (do a_ag32 <- force' a
@@ -149,19 +153,22 @@ foo2 = do a <- delayAction' (pure (facilePrimalityTest smallerPrime))
 -- where we have these overloaded variants:
 --   (similiar to what is in tinman/LoCo/MEP/Thunk.hs)
 
-delayAction' :: MonadIO m => m a -> m (Thunked a)
+delayAction' :: MonadIO m => m a -> m (Thunked m a)
 delayAction' m = error "delayAction'"
                   
-force' :: MonadIO m => Thunked a -> m a
+force' :: MonadIO m => Thunked m a -> m a
 force' x = error "force'"
 
 
 -- how we could use foo2:
 
+-- [Sam] I think the 'proof' you want to have is more easily demonstrated by
+-- wrapping the whole computation in `runIdentityT`, rather than just the `foo2`
+-- computation (which would entail wrapping the `force`s similarly)
 userCodeFoo2 :: IO Bool
-userCodeFoo2 =
+userCodeFoo2 = runIdentityT $
   do
-    x <- runIdentityT foo2
+    x <- foo2
          -- 'proof' that we can use foo2 at other MonadIO instances.
     b <- force (b1 x)
     a <- force (a1 x)

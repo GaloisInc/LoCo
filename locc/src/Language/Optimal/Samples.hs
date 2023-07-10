@@ -5,6 +5,7 @@
 
 module Language.Optimal.Samples where
 
+import Control.Monad.IO.Class
 import Data.Word (Word64, Word8)
 import Language.Optimal.Quote (optimal)
 import Thunk.RefVal (Thunked, delayAction, force)
@@ -20,9 +21,10 @@ facilePrimalityTest n = and [n `mod` i /= 0 | i <- [2 .. n `div` 2]]
 
 -------------------------------------------------------------------------------
 
-[optimal|
-type Bar = { fooField : Foo, b2 : Bool }
-|]
+-- [optimal|
+-- type Bar = { fooField : Foo, b2 : Bool }
+
+-- | ]
 
 -- data Bar = Bar
 --   { bar :: Thunked Foo,
@@ -60,7 +62,7 @@ userCode :: IO ()
 userCode =
   do
     f <- foo
-    let bField :: Thunked Char
+    let bField :: Thunked IO Char
         bField = b f
     bPure <- force bField
     a <- force (a f)
@@ -98,9 +100,9 @@ type ICC = { fileText : String, tableSize : Int, tableEntries : TableEntries }
 
 icc : ICC
 icc = {
-  fileText  = <| putStrLn "fileText" >> readFile "icc.txt" |>,
-  tableSize = <| putStrLn "tableSize" >> pure (read (take 2 fileText)) |>,
-  unusedField = <| putStrLn "unusedField" |>,
+  fileText  = <| liftIO $ putStrLn "fileText" >> readFile "icc.txt" |>,
+  tableSize = <| liftIO $ putStrLn "tableSize" >> pure (read (take 2 fileText)) |>,
+  unusedField = <| liftIO $ putStrLn "unusedField" |>,
   tableEntries = <|
 let body = drop 2 fileText
     chunks = chunk tableSize body

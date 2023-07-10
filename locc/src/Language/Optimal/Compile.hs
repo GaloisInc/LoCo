@@ -1,11 +1,13 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Language.Optimal.Compile where
 
+import Control.Monad.IO.Class
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Set (Set)
@@ -36,7 +38,8 @@ compileOptimalModuleDecl ModuleDecl {..} =
     result <- noBindS [|pure $(pure recConstr)|]
     let body = DoE Nothing (binds <> [result])
         decl = FunD funName [Clause mempty (NormalB body) mempty]
-    sig <- sigD funName [t|IO $(conT (mkName' modTyName))|]
+    sigTy <- [t|forall m. MonadIO m => m $(appT (conT (mkName' modTyName)) [t|m|])|]
+    sig <- sigD funName (pure sigTy)
     pure [sig, decl]
   where
     funName = mkName' modName
@@ -98,17 +101,18 @@ compileOptimalTypeDecl (TypeDecl {tdName = tdName, tdType = tdType}) =
 compileOptimalRecordDecl :: Name -> Env Optimal.Type -> Q Dec
 compileOptimalRecordDecl recName recFields = decl
   where
-    decl = dataD context (recName) tyVars kind [ctor] deriv
+    decl = dataD context recName tyVars kind [ctor] deriv
     ctor = recC ctorName ctorFields
     tyName = recName
     ctorName = tyName
     ctorFields = map (uncurry mkVarBangType) (Map.toList recFields)
     mkVarBangType fieldName optimalType =
       do
-        thunked <- appT (conT (mkName "Thunked")) (compileOptimalType optimalType)
+        thunked <- appT (appT (conT (mkName "Thunked")) (varT m)) (compileOptimalType optimalType)
         pure (mkName' fieldName, noBang, thunked)
     context = mempty
-    tyVars = mempty
+    tyVars = [PlainTV m ()]
+    m = mkName "m"
     kind = Nothing
     deriv = mempty
     noBang = Bang NoSourceUnpackedness NoSourceStrictness
