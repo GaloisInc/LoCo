@@ -1,5 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
 module Language.PEAR.Primitives where  
 
 -- base pkgs:
@@ -78,7 +80,6 @@ interpret :: MonadIO m => Env ([a] -> m a) -> Env (m a)
 interpret = stub
 
 
-{-
 ---- New (FIXME: integrate) --------------------------------------------------
 
 runNoFlT_IO :: NoFlT IO a -> Contents -> IO a
@@ -429,5 +430,3 @@ app_DynWd_Fail' (wc,p) r = assert (checkWC wc (r_width r))
                             (a,r2) <- p r
                             return ((a, r `regionMinusSuffix` r2), r2)
                            
-  
--}

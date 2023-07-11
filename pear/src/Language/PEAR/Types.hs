@@ -15,6 +15,13 @@ import           Test.QuickCheck.Arbitrary.Generic
 import           Language.PEAR.Util
 
 
+---- Syntax --------------------------------------------------------
+
+infixr 0 -->
+
+s --> a = (s,a)
+
+
 ---- Constrained Regions --------------------------------------------------
 
 -- from parser's view: constraints are all mapped down to ConstrainedRegion

@@ -26,7 +26,9 @@ common common
         -Wall
         -Wextra
         -Wno-unrecognised-pragmas
-
+        -Wno-missing-signatures
+          -- FIXME: add back
+          
     default-extensions:
         ImportQualifiedPost
         LambdaCase
@@ -46,9 +48,11 @@ library
         Language.PEAR.Region.Implem
         Language.PEAR.Region.Test
         Language.PEAR.Primitives
+        Language.PEAR.ParserLibrary
         Language.PEAR.Types
         Language.PEAR.Util
         
+        Language.OptimalPEAR.Examples.ICC_V1
         Language.OptimalPEAR.Examples.Trivial
   
     build-depends:

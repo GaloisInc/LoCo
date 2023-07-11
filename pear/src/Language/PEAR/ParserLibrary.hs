@@ -1,12 +1,12 @@
-module Language.PEAR.RegionParser.ParserLibrary where
+module Language.PEAR.ParserLibrary where
 
 -- base pkgs:
 import Control.Exception(assert)
 import Data.Word
 
 -- local modules:
-import Language.PEAR.RegionParser.Primitives
-import Language.PEAR.RegionParser.Types
+import Language.PEAR.Primitives
+import Language.PEAR.Types
 import Language.PEAR.Util
 import Language.PEAR.Region.API
 
@@ -72,6 +72,22 @@ pWord32_FxdWd_FailT = lift_FxdWd_NoFlT pWord32_FxdWd_NoFlT
 pWord32_FxdWd_NoFlT :: Monad m => RgnPrsr_FxdWd_NoFlT m Word32
 pWord32_FxdWd_NoFlT = mkPrim_FxdWd_NoFlT 4 (read :: String -> Word32)
 
+
+-- | fixed width parser: two contiguous words, Transformer version
+pTwoWords_FxdWd_NoFlT :: forall m. Monad m => RgnPrsr_FxdWd_NoFlT m (Word32,Word32)
+pTwoWords_FxdWd_NoFlT =
+  ( sum ws
+  , \r0-> do
+          let (r1,r2) = pair $ splitWidths r0 ws
+          x <- app_FxdWd_NoFlT pWord32_FxdWd_NoFlT r1 -- x & y parsers: can switch!
+          y <- app_FxdWd_NoFlT pWord32_FxdWd_NoFlT r2
+          return (x,y)
+  )
+  where
+  ws = map width_FxdWd [ pWord32_FxdWd_NoFlT :: RgnPrsr_FxdWd_NoFlT m Word32
+                       , pWord32_FxdWd_NoFlT]
+
+    -- FIXME: need for type annotation above: ugh.
 
 ---- Ascii Number RgnPrsrs ----------------------------------------------------
 

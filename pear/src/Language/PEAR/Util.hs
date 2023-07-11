@@ -53,6 +53,11 @@ getEnv env v = case lookup v env of
                  Nothing -> error
                           $ unwords ["getEnv:", show v, show (map fst env)]
 
+pair :: [a] -> (a,a)
+pair [a1,a2] = (a1,a2)
+pair _       = error "pair"
+
+
 ---- reads variations --------------------------------------------------------
 
 readM :: Read a => String -> Maybe a
