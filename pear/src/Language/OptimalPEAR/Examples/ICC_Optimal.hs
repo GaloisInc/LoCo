@@ -52,73 +52,63 @@ type ICC = { cnt        : Word32
            , r3       : Region
            , teds_rs  : [Region]
            , canon_rs : CanonicalRegions
+           , r0       : Region
            }
 
 icc : ICC
 icc =
-  { cnt     = <| pWord32 `app` cnt_r |>,
-    tbl     = <| return (fst tblR3) |>,
+  { cnt        = <| pWord32 `app` cnt_r |>,
+    tbl        = <| return (fst tblR3) |>,
     
     teds       = <| teds' teds_rs |>,
     teds_safe  = <| if cavityFree then return teds
                                   else throwE' ["teds not safe"]
                  |>, 
-    teds_rs    = <| teds_rs' tbl |>,
+    teds_rs    = <| teds_rs' tbl r0 |>,
 
-    cavityFree = <| cavityFree' canon_rs |>,
+    cavityFree = <| cavityFree' canon_rs r0 |>,
     canon_rs   = <| canon_rs' cnt_r r2 r3 teds_rs |>,
     cnt_r      = <| return (rs!!0) |>,
     r2         = <| return (rs!!1) |>,
-    rs         = <| rs' |>,
+    rs         = <| failP $ unPair <$> R.split1P r0 wWord32 |>,
     
     tblR3      = <| tblR3' rs cnt |>,
-    r3         = <| return (snd tblR3) |>
+    r3         = <| return (snd tblR3) |>,
+    r0         = <| liftIO $ getTopLevelRegion |>
   }
 |]
 
 icc :: MonadIO m => FailT m (ICC (FailT m))
 
-cavityFree' canon_rs =
-  do
-  r0 <- liftIO $ getTopLevelRegion
-  let cavities = r0 `R.complementCRs` canon_rs
+cavityFree' canon_rs r0 =
   case cavities of
     R.CR [] -> return True
     R.CR rs -> do
                -- NOTE: only side-effect in the ICC spec!
-               --  - rather: fail?
+               --  - rather fail?
                liftIO $ mapM_ putStrLn
                       $ ["Cavities present:"
                         , ""
                         ] ++ map ((" "++) . R.ppRegion) rs
                return False
-               
+  where
+  cavities = r0 `R.complementCRs` canon_rs
+
 -- | create region set (in canonical form), fail if not disjoint.
 canon_rs' cnt_r r2 r3 teds_rs =
-  except'
+  failP
     $ elaboratePossibly ["TED values are not disjoint:"]
-    $ R.regionsDisjoint_Possibly (cnt_r : r_tbl : teds_rs)
+    $ R.regionsDisjointP (cnt_r : r_tbl : teds_rs)
  where
  r_tbl = r2 `R.regionMinusSuffix` r3
-
-rs' =
-  let
-    wCnt = width_FxdWd pWord32_FxdWd_NoFl
-  in
-    do
-    r0 <- liftIO $ getTopLevelRegion
-    (r1,r2) <- except' $ R.split1_Possibly r0 wCnt
-    return [r1,r2]
 
 teds' teds_rs =
   forM teds_rs $ \r-> app (pTED_FxdWd_NoFlT (r_width r)) r
  
-teds_rs' tbl =
-  do
-  r0 <- liftIO $ getTopLevelRegion
-  except' $
+teds_rs' tbl r0 =
+  failP $
     (forM tbl $
-      \(loc,sz)-> R.subRegion_Possibly r0 (toLoc loc) (toLoc sz))
+      \(loc,sz)-> R.subRegionP r0 (toLoc loc) (toLoc sz))
                   
 tblR3' :: forall m. MonadIO m => [Region] -> Word32 -> FailT m TBLR
 tblR3' [_,r2] cnt =
@@ -127,15 +117,11 @@ tblR3' [_,r2] cnt =
     lpTbl :: RgnPrsr_FxdWd_NoFlT m [(Word32, Word32)]
       -- FIXME: eliminate need for signature
     lpTbl = pMany_FxdWd_NoFlT (fromIntegral cnt) pTwoWords_FxdWd_NoFlT
-  case R.split1_Possibly r2 (width_FxdWd lpTbl) of
-         Right (r_tbl, r3) ->
-             do
-             tbl  <- lpTbl `app` r_tbl 
-             return (tbl,r3)
-         Left ms ->
-             throwE' ms
-  
-  
+  (r_tbl, r3) <- failP $ R.split1P r2 (width_FxdWd lpTbl)
+  tbl  <- lpTbl `app` r_tbl 
+  return (tbl,r3)
+    
+
 ---- Hack ----------------------------------------------------------
 -- FIXME: this a hack until we have parameterized modules.
 

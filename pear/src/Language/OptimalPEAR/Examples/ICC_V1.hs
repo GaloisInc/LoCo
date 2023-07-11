@@ -57,7 +57,12 @@ app p r = lift_NoFlT $ app_FxdWd_NoFlT p r
 pWord32 :: Monad m => RgnPrsr_FxdWd_NoFlT m Word32
 pWord32 = pWord32_FxdWd_NoFlT
 
-  
+wWord32 :: Width
+wWord32 = width_FxdWd pWord32_FxdWd_NoFl
+
+failP :: Monad m => Possibly a -> FailT m a
+failP x = except' x
+
 ---- Example: ICC (in the tinman MEP style) ------------------------
 
 data Val = VR Region

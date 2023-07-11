@@ -10,12 +10,16 @@ module Language.PEAR.Region.API
   -- | region primitives
   , regionContains
   , split1
+  , split1P
+  , split1F
   , split1_Possibly
   , splitWidths
   , splitWidthsP  -- FIXME: make naming consistent
   , splitWidths'
   , subRegion_Possibly
+  , subRegionP
   , regionMinusSuffix
+  , regionsDisjointP
   , regionsDisjoint_Possibly
   , regionsDisjoint_Possibly_
   , regionsOverlap
@@ -28,3 +32,7 @@ where
 
 import Language.PEAR.Region.Implem
 
+split1P          = Language.PEAR.Region.Implem.split1_Possibly
+split1F          = Language.PEAR.Region.Implem.split1
+subRegionP       = Language.PEAR.Region.Implem.subRegion_Possibly
+regionsDisjointP = Language.PEAR.Region.Implem.regionsDisjoint_Possibly

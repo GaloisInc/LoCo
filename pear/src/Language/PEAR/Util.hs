@@ -57,6 +57,9 @@ pair :: [a] -> (a,a)
 pair [a1,a2] = (a1,a2)
 pair _       = error "pair"
 
+unPair :: (a,a) -> [a]
+unPair (a1,a2) = [a1,a2]
+
 
 ---- reads variations --------------------------------------------------------
 
