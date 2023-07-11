@@ -39,27 +39,32 @@ type TBLR = ( TBL , Region )
 type TBL  = [(Word32,Word32)]
   
 [optimal|
-type ICC = { cnt   : Word32
+type ICC = { cnt     : Word32
+           , teds    : [TED]
 
-           , cnt_r : Region
-           , r2    : Region
-           , rs    : [Region]
-           , tblR3 : TBLR
-           , tbl   : TBL
-           , r3    : Region
+           , cnt_r   : Region
+           , r2      : Region
+           , rs      : [Region]
+           , tblR3   : TBLR
+           , tbl     : TBL
+           , r3      : Region
+           , teds_rs : [Region]
            }
 
 icc : ICC
 icc =
-  { cnt   = <| pWord32 `app` cnt_r |>,
-    tbl   = <| return (fst tblR3) |>,
+  { cnt     = <| pWord32 `app` cnt_r |>,
+    tbl     = <| return (fst tblR3) |>,
 
-    cnt_r = <| return (rs!!0) |>,
-    r2    = <| return (rs!!1) |>,
-    rs    = <| rs' |>,
+    teds    = <| teds' teds_rs |>,
+    teds_rs = <| teds_rs' tbl |>,
 
-    tblR3 = <| tblR3' rs cnt |>,
-    r3    = <| return (snd tblR3) |>
+    cnt_r   = <| return (rs!!0) |>,
+    r2      = <| return (rs!!1) |>,
+    rs      = <| rs' |>,
+
+    tblR3   = <| tblR3' rs cnt |>,
+    r3      = <| return (snd tblR3) |>
   }
 |]
 
@@ -74,13 +79,22 @@ rs' =
     (r1,r2) <- except' $ R.split1_Possibly r0 wCnt
     return [r1,r2]
 
-
+teds' teds_rs =
+  forM teds_rs $ \r-> app (pTED_FxdWd_NoFlT (r_width r)) r
+ 
+teds_rs' tbl =
+  do
+  r0 <- liftIO $ getTopLevelRegion
+  except' $
+    (forM tbl $
+      \(loc,sz)-> R.subRegion_Possibly r0 (toLoc loc) (toLoc sz))
+                  
 tblR3' :: forall m. MonadIO m => [Region] -> Word32 -> FailT m TBLR
 tblR3' [_,r2] cnt =
   do
   let
     lpTbl :: RgnPrsr_FxdWd_NoFlT m [(Word32, Word32)]
-      -- FIXME: why do you need sig?
+      -- FIXME: eliminate need for signature
     lpTbl = pMany_FxdWd_NoFlT (fromIntegral cnt) pTwoWords_FxdWd_NoFlT
   case R.split1_Possibly r2 (width_FxdWd lpTbl) of
          Right (r_tbl, r3) ->
@@ -124,6 +138,19 @@ A couple locc/Optimal issues:
      Exception when trying to run compile-time code:
        TODO: finish constructors in `expFreeVars`
          (failed on DoE Nothing [BindS (TupP [VarP...)
+
+ FIXME:
+   when I define module element that isn't in type, we get warning, not error:
+
+    src/Language/OptimalPEAR/Examples/ICC_Optimal.hs:(41,10)-(66,2): 
+     warning: [-Wunused-matches]
+        Defined but not used: ‘teds_rs’
+       |
+    41 | [optimal|
+       |          ^...
+
+   hmmm: other behavior?
+
 -}
 
 
