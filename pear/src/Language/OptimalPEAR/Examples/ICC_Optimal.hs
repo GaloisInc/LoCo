@@ -41,13 +41,13 @@ import           Language.OptimalPEAR.Examples.ICC_V1
 ---- Example: ICC (in Optimal) -------------------------------------
 
 type TBLR = ([ (Word32,Word32) ] , Region )
-
+  
 [optimal|
-type ICC = { rs   : [Region]
-           , rCnt : Region
-           , r2   : Region
+type ICC = { rs    : [Region]
+           , rCnt  : Region
+           , r2    : Region
 
-           , cnt  : Word32
+           , cnt   : Word32
            , tbl_r : TBLR
            }
 
@@ -65,9 +65,14 @@ icc2 =
 icc2 :: MonadIO m => FailT m (ICC (FailT m))
 
 {-
-FIXME: when cntRs' inlined, get
-    Exception when trying to run compile-time code:
-      TODO: finish constructors in `expFreeVars` (failed on DoE Nothing [BindS (TupP [VarP...)
+A couple locc/Optimal issues:
+
+ FIXME: parsing error when I try to inline TBLR.
+
+ FIXME: when cntRs' inlined, get
+     Exception when trying to run compile-time code:
+       TODO: finish constructors in `expFreeVars`
+         (failed on DoE Nothing [BindS (TupP [VarP...)
 -}
 
 
@@ -78,14 +83,13 @@ tbl_r' [_,r2] cnt =
     lpTbl :: RgnPrsr_FxdWd_NoFlT m [(Word32, Word32)]
       -- FIXME: why do you need sig?
     lpTbl = pMany_FxdWd_NoFlT (fromIntegral cnt) pTwoWords_FxdWd_NoFlT
-  v <- case R.split1_Possibly r2 (width_FxdWd lpTbl) of
+  case R.split1_Possibly r2 (width_FxdWd lpTbl) of
          Right (r_tbl, r3) ->
              do
              tbl  <- lpTbl `app` r_tbl 
-             return $ Right $ (tbl,r3)
+             return (tbl,r3)
          Left ms ->
-             return $ Left ms
-  except' v
+             throwE' ms
   
 rs' =
   let

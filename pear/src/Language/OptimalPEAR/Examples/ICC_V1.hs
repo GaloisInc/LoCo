@@ -41,6 +41,10 @@ f_PrimFail :: Monad m => FailT m (Possibly v) -> FailT m v
 except' :: Monad m => Possibly a -> FailT m a
 except' e = FailT $ E.except e
 
+throwE' :: Monad m => Errors -> FailT m a
+throwE' es = FailT $ E.throwE es
+
+
 f_FuncPure = return
 f_FuncFail = except'
 f_PrimFail m = do
