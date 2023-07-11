@@ -26,7 +26,7 @@ import           Thunk.RefVal (Thunked, delayAction, force)
 -- local modules:
 import           Language.PEAR.Primitives
 import           Language.PEAR.ParserLibrary
-import           Language.PEAR.Region.API (Region,r_width)
+import           Language.PEAR.Region.API (Region,r_width,CanonicalRegions)
 import qualified Language.PEAR.Region.API as R
 import           Language.PEAR.Types
 import           Language.PEAR.Util
@@ -37,38 +37,69 @@ import           Language.OptimalPEAR.Examples.ICC_V1 hiding (icc)
 
 type TBLR = ( TBL , Region )
 type TBL  = [(Word32,Word32)]
-  
-[optimal|
-type ICC = { cnt     : Word32
-           , teds    : [TED]
 
-           , cnt_r   : Region
-           , r2      : Region
-           , rs      : [Region]
-           , tblR3   : TBLR
-           , tbl     : TBL
-           , r3      : Region
-           , teds_rs : [Region]
+[optimal|
+type ICC = { cnt        : Word32
+           , teds       : [TED]
+           , teds_safe  : [TED]
+           , cavityFree : Bool
+           
+           , cnt_r    : Region
+           , r2       : Region
+           , rs       : [Region]
+           , tblR3    : TBLR
+           , tbl      : TBL
+           , r3       : Region
+           , teds_rs  : [Region]
+           , canon_rs : CanonicalRegions
            }
 
 icc : ICC
 icc =
   { cnt     = <| pWord32 `app` cnt_r |>,
     tbl     = <| return (fst tblR3) |>,
+    
+    teds       = <| teds' teds_rs |>,
+    teds_safe  = <| if cavityFree then return teds
+                                  else throwE' ["teds not safe"]
+                 |>, 
+    teds_rs    = <| teds_rs' tbl |>,
 
-    teds    = <| teds' teds_rs |>,
-    teds_rs = <| teds_rs' tbl |>,
-
-    cnt_r   = <| return (rs!!0) |>,
-    r2      = <| return (rs!!1) |>,
-    rs      = <| rs' |>,
-
-    tblR3   = <| tblR3' rs cnt |>,
-    r3      = <| return (snd tblR3) |>
+    cavityFree = <| cavityFree' canon_rs |>,
+    canon_rs   = <| canon_rs' cnt_r r2 r3 teds_rs |>,
+    cnt_r      = <| return (rs!!0) |>,
+    r2         = <| return (rs!!1) |>,
+    rs         = <| rs' |>,
+    
+    tblR3      = <| tblR3' rs cnt |>,
+    r3         = <| return (snd tblR3) |>
   }
 |]
 
 icc :: MonadIO m => FailT m (ICC (FailT m))
+
+cavityFree' canon_rs =
+  do
+  r0 <- liftIO $ getTopLevelRegion
+  let cavities = r0 `R.complementCRs` canon_rs
+  case cavities of
+    R.CR [] -> return True
+    R.CR rs -> do
+               -- NOTE: only side-effect in the ICC spec!
+               --  - rather: fail?
+               liftIO $ mapM_ putStrLn
+                      $ ["Cavities present:"
+                        , ""
+                        ] ++ map ((" "++) . R.ppRegion) rs
+               return False
+               
+-- | create region set (in canonical form), fail if not disjoint.
+canon_rs' cnt_r r2 r3 teds_rs =
+  except'
+    $ elaboratePossibly ["TED values are not disjoint:"]
+    $ R.regionsDisjoint_Possibly (cnt_r : r_tbl : teds_rs)
+ where
+ r_tbl = r2 `R.regionMinusSuffix` r3
 
 rs' =
   let

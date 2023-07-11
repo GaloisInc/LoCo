@@ -132,7 +132,7 @@ icc r0 =
   , "RS_MERGEDDISJ" -->
         E ["R_CNT,R2","R3","R_TEDS"] $ 
         \[VRS[r_cnt,r2], VR r3, VRS r_teds] -> 
-        f_FuncFail $
+        except' $
         do
         let r_tbl = r2 `R.regionMinusSuffix` r3
         crs <- elaboratePossibly ["TED values are not disjoint:"]
@@ -142,7 +142,7 @@ icc r0 =
   , "CAVITYFREE" -->
         E ["RS_MERGEDDISJ"] $ 
         \[VCRS crs] -> 
-        f_FuncFail $
+        except' $
         do
         let cavities = r0 `R.complementCRs` crs
         case cavities of

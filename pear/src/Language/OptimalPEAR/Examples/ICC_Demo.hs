@@ -5,7 +5,6 @@ module Language.OptimalPEAR.Examples.ICC_Demo where
 
 -- base pkgs:
 import           Control.Monad
-import           Data.Word
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Identity
 import           Control.Monad.Trans.Except
@@ -15,7 +14,7 @@ import           Data.Word (Word64, Word8)
 import           Language.Optimal.Quote (optimal)
 import           Thunk.RefVal (Thunked, delayAction, force)
 
--- local modules:
+-- local PEAR modules:
 import           Language.PEAR.Primitives
 import           Language.PEAR.ParserLibrary
 import           Language.PEAR.Region.API (Region,r_width)
@@ -23,7 +22,7 @@ import qualified Language.PEAR.Region.API as R
 import           Language.PEAR.Types
 import           Language.PEAR.Util
 
--- ICC
+-- ICC:
 import           Language.OptimalPEAR.Examples.ICC_Optimal
 import           Language.OptimalPEAR.Examples.ICC_Inputs
 
@@ -31,17 +30,17 @@ import           Language.OptimalPEAR.Examples.ICC_Inputs
 ---- run ICC -------------------------------------------------------
 
 iccPrims :: [(String, ICC (FailT IO) -> FailT IO String)]
-iccPrims = [ ("rs"     , forceAndShow . rs )
-           , ("cnt"    , forceAndShow . cnt)
-           , ("teds"   , forceAndShow . teds)
-
-           , ("cnt_r"  , forceAndShow . cnt_r)
-           , ("r2"     , forceAndShow . r2)
-           , ("tblR3"  , forceAndShow . tblR3)
-           , ("tbl"    , forceAndShow . tbl)
-           , ("r3"     , forceAndShow . r3)
-           , ("teds_rs", forceAndShow . teds_rs)
-           ]
+iccPrims =
+  [ ("rs"     , forceAndShow . rs )
+  , ("cnt"    , forceAndShow . cnt)
+  , ("teds"   , forceAndShow . teds)
+  , ("cnt_r"  , forceAndShow . cnt_r)
+  , ("r2"     , forceAndShow . r2)
+  , ("tblR3"  , forceAndShow . tblR3)
+  , ("tbl"    , forceAndShow . tbl)
+  , ("r3"     , forceAndShow . r3)
+  , ("teds_rs", forceAndShow . teds_rs)
+  ]
            
 run_ICC = run (\_-> icc)
               iccPrims
