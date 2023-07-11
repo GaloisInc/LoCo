@@ -63,7 +63,7 @@ parseOptimalModuleDecl :: Parser ModuleDecl
 parseOptimalModuleDecl =
   do
     (modName, tyName) <- parseBinop parseVarName (single ':') parseTyName
-    (modName', binds) <- parseBinop (chunk modName) (single '=') (parseExprBindings parseHSExpr)
+    (modName', binds) <- parseBinop (chunk modName) (single '=') (parseBindings (single '=') parseHSExpr)
     pure ModuleDecl {modTyName = tyName, modTy = Nothing, modName = modName', modEnv = binds}
 
 parseOptimalTypeDecl :: Parser TypeDecl
@@ -127,16 +127,10 @@ parseHSExpr =
 
 -------------------------------------------------------------------------------
 
-parseExprBindings :: Parser expr -> Parser (Env expr)
-parseExprBindings = parseBindings (single '=')
-
-parseTypeBindings :: Parser ty -> Parser (Env ty)
-parseTypeBindings = parseBindings (single ':')
-
 -- | Parse a curly-braced, comma-separated, non-empty set of "bindings",
 -- producing a mapping from symbols to expressions. Parsing is parametric over
 -- binding syntax ('=', e.g.) and expression syntax (e.g. `Exp`)
-parseBindings :: Parser op -> Parser rhs -> Parser (Env rhs)
+parseBindings :: Parser separator -> Parser rhs -> Parser (Env rhs)
 parseBindings parseOp parseRhs =
   do
     binds <- braced (binding `sepBy1` separator)

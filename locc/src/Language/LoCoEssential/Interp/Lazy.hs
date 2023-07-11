@@ -45,7 +45,6 @@ evalBindLazy env ident e =
     vThunk <- delay $
       do
         let env' = Map.restrictKeys env (fvs e)
-        liftIO $ putStrLn $ "forcing " <> ident
         env'' <- mapM force env'
         eval env'' e
 
