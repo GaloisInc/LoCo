@@ -31,15 +31,18 @@ import           Language.OptimalPEAR.Examples.ICC_Inputs
 
 iccPrims :: [(String, ICC (FailT IO) -> FailT IO String)]
 iccPrims =
-  [ ("rs"     , forceAndShow . rs )
-  , ("cnt"    , forceAndShow . cnt)
-  , ("teds"   , forceAndShow . teds)
-  , ("cnt_r"  , forceAndShow . cnt_r)
-  , ("r2"     , forceAndShow . r2)
-  , ("tblR3"  , forceAndShow . tblR3)
-  , ("tbl"    , forceAndShow . tbl)
-  , ("r3"     , forceAndShow . r3)
-  , ("teds_rs", forceAndShow . teds_rs)
+  [ ("cnt"       , forceAndShow . cnt)
+  , ("teds"      , forceAndShow . teds)
+  , ("teds_safe" , forceAndShow . teds_safe)
+  , ("cavityFree", forceAndShow . cavityFree)
+  , ("cnt_r"     , forceAndShow . cnt_r)
+  , ("r2"        , forceAndShow . r2)
+  , ("rs"        , forceAndShow . rs )
+  , ("tblR3"     , forceAndShow . tblR3)
+  , ("tbl"       , forceAndShow . tbl)
+  , ("r3"        , forceAndShow . r3)
+  , ("teds_rs"   , forceAndShow . teds_rs)
+  , ("canon_rs"  , forceAndShow . canon_rs)
   ]
            
 run_ICC = run (\_-> icc)
