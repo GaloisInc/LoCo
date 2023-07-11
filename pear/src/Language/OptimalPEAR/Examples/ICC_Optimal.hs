@@ -11,11 +11,13 @@ module Language.OptimalPEAR.Examples.ICC_Optimal where
 
 -- base pkgs:
 import           Control.Monad
+import           Data.IORef
 import           Data.Word
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Identity
 import           Control.Monad.Trans.Except
 import           Data.Word (Word64, Word8)
+import           System.IO.Unsafe (unsafePerformIO)
 
 -- package locc (optimal):
 import           Language.Optimal.Quote (optimal)
@@ -94,10 +96,30 @@ tbl_r' [_,r2] cnt =
 rs' =
   let
     wCnt = width_FxdWd pWord32_FxdWd_NoFl
-    r0 = stub -- FIXME: use ioref to pass top-region
   in
-    f_FuncFail $
     do
-    (r1,r2) <- R.split1_Possibly r0 wCnt
+    r0 <- liftIO $ getTopLevelRegion
+    (r1,r2) <- except' $ R.split1_Possibly r0 wCnt
     return [r1,r2]
+
   
+---- Hack ----------------------------------------------------------
+-- FIXME: this a hack until we have parameterized modules.
+
+regionGlobalVar :: IORef (Maybe Region)
+{-# NOINLINE regionGlobalVar #-}
+regionGlobalVar = unsafePerformIO (newIORef Nothing)
+
+setTopLevelRegion :: MonadIO m => Region -> m ()
+setTopLevelRegion r =
+  do
+  liftIO $ writeIORef regionGlobalVar (Just r)
+
+getTopLevelRegion :: MonadIO m => m Region
+getTopLevelRegion =
+  do
+  mr <- liftIO $ readIORef regionGlobalVar
+  case mr of
+    Just x -> return x
+    _      -> error "getTopLevelRegion"
+          

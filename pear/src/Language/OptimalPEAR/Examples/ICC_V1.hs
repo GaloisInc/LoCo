@@ -37,6 +37,10 @@ data RHS m v =
 
 f_FuncFail :: Monad m => Possibly v           -> FailT m v
 f_PrimFail :: Monad m => FailT m (Possibly v) -> FailT m v
+f_FuncFail = except'
+f_PrimFail m = do
+               v <- m
+               except' v
 
 except' :: Monad m => Possibly a -> FailT m a
 except' e = FailT $ E.except e
@@ -44,10 +48,6 @@ except' e = FailT $ E.except e
 throwE' :: Monad m => Errors -> FailT m a
 throwE' es = FailT $ E.throwE es
 
-f_FuncFail = except'
-f_PrimFail m = do
-               v <- m
-               except' v
 
 app :: Monad m => RgnPrsr_FxdWd_NoFlT m a -> Region -> FailT m a
 app p r = lift_NoFlT $ app_FxdWd_NoFlT p r 
@@ -76,7 +76,7 @@ icc r0 =
   [ "R_CNT,R2" -->
          E [] $ 
          \[] -> 
-         f_FuncFail $
+         except' $
          do
          (r1,r2) <- {- E.except $ -}
                     R.split1_Possibly r0 wCnt
