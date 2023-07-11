@@ -55,7 +55,9 @@ library
         Language.OptimalPEAR.Examples.ICC_V1
         Language.OptimalPEAR.Examples.ICC_Optimal
         Language.OptimalPEAR.Examples.Trivial
-  
+        Language.OptimalPEAR.Examples.ICC_Demo
+        Language.OptimalPEAR.Examples.ICC_Inputs
+
     build-depends:
         base ^>=4.16.4.0,
         containers ^>=0.6.4.1,

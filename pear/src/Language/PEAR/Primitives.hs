@@ -92,6 +92,10 @@ runFailT' :: FailT m a -> Contents -> m (Possibly a)
 runFailT' (FailT m) s = runNoFlT' (runExceptT m) s
 
   -- DIFF between this and 10lines below
+
+runFailT_IO :: FailT IO a -> Contents -> IO (Possibly a)
+runFailT_IO = runFailT'
+
   
 type FailIO a = FailT IO a
 type NoFlIO a = NoFlT IO a
