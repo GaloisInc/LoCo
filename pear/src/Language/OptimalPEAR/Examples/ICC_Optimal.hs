@@ -143,31 +143,5 @@ getTopLevelRegion =
     _      -> error "getTopLevelRegion"
 
 
----- Issues --------------------------------------------------------
-{-
-A couple locc/Optimal issues:
-
- FIXME: parsing error when I try to inline type synonym TBLR inside optimal.
-
- FIXME: type synonym TBL_R causes optimal parsing error.
-
- FIXME: when cntRs' inlined, get
-     Exception when trying to run compile-time code:
-       TODO: finish constructors in `expFreeVars`
-         (failed on DoE Nothing [BindS (TupP [VarP...)
-
- FIXME:
-   when I define module element that isn't in type, we get warning, not error:
-
-    src/Language/OptimalPEAR/Examples/ICC_Optimal.hs:(41,10)-(66,2): 
-     warning: [-Wunused-matches]
-        Defined but not used: ‘teds_rs’
-       |
-    41 | [optimal|
-       |          ^...
-
-   hmmm: other behavior?
-
--}
 
 
