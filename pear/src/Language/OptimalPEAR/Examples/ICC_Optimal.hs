@@ -1,11 +1,24 @@
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# LANGUAGE QuasiQuotes #-}
+-- {-# LANGUAGE NoMonomorphismRestriction #-}
+{-# OPTIONS_GHC -ddump-splices #-}
 
-module Language.OptimalPEAR.Examples.ICC_V1 where
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+  -- FIXME!
+
+module Language.OptimalPEAR.Examples.ICC_Optimal where
 
 -- base pkgs:
 import           Control.Monad
 import           Data.Word
-import qualified Control.Monad.Trans.Except as E
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Identity
+import           Control.Monad.Trans.Except
+import           Data.Word (Word64, Word8)
+
+-- package locc (optimal):
+import           Language.Optimal.Quote (optimal)
+import           Thunk.RefVal (Thunked, delayAction, force)
 
 -- local modules:
 import           Language.PEAR.Primitives
@@ -42,7 +55,7 @@ f_PrimFail :: Monad m => ([v] -> FailT m (Possibly v)) -> [v] -> FailT m v
 -- FIXME: abstract: ?
 
 except' :: Monad m => Possibly a -> FailT m a
-except' e = FailT $ E.except e
+except' e = FailT $ except e
 
 f_FuncPure f vs = return $ f vs
 
@@ -58,6 +71,10 @@ app :: Monad m => RgnPrsr_FxdWd_NoFlT m a -> Region -> FailT m a
 app p r = lift_NoFlT $ app_FxdWd_NoFlT p r 
 
   
+---- Example: ICC (in Optimal) -------------------------------------
+
+
+
 ---- Example: ICC (in the tinman MEP style) ------------------------
 
 data Val = VR Region
