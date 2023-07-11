@@ -57,7 +57,7 @@ icc2 =
   rs    = <| rs' |>,
   rCnt  = <| return (rs!!0) |>,
   r2    = <| return (rs!!1) |>,
-  cnt   = <| pWord32_FxdWd_NoFlT `app` rCnt |>,
+  cnt   = <| pWord32 `app` rCnt |>,
   tbl_r = <| tbl_r' rs cnt |>
   }
 |]

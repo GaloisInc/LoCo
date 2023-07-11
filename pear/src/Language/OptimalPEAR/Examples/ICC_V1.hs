@@ -1,3 +1,4 @@
+-- {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Language.OptimalPEAR.Examples.ICC_V1 where
@@ -34,7 +35,6 @@ data RHS m v =
    , func :: [v] -> m v
    }
 
-f_FuncPure :: Monad m => v                    -> FailT m v
 f_FuncFail :: Monad m => Possibly v           -> FailT m v
 f_PrimFail :: Monad m => FailT m (Possibly v) -> FailT m v
 
@@ -44,8 +44,6 @@ except' e = FailT $ E.except e
 throwE' :: Monad m => Errors -> FailT m a
 throwE' es = FailT $ E.throwE es
 
-
-f_FuncPure = return
 f_FuncFail = except'
 f_PrimFail m = do
                v <- m
@@ -54,6 +52,8 @@ f_PrimFail m = do
 app :: Monad m => RgnPrsr_FxdWd_NoFlT m a -> Region -> FailT m a
 app p r = lift_NoFlT $ app_FxdWd_NoFlT p r 
 
+pWord32 :: Monad m => RgnPrsr_FxdWd_NoFlT m Word32
+pWord32 = pWord32_FxdWd_NoFlT
   
 ---- Example: ICC (in the tinman MEP style) ------------------------
 
