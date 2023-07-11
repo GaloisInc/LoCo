@@ -30,20 +30,20 @@ import           Language.OptimalPEAR.Examples.ICC_Inputs
 
 ---- run ICC -------------------------------------------------------
 
-icc2Prims :: [(String, ICC (FailT IO) -> FailT IO String)]
-icc2Prims = [("rs" , forceAndShow . rs )
-            ,("cnt", forceAndShow . cnt)
-            ]
+iccPrims :: [(String, ICC (FailT IO) -> FailT IO String)]
+iccPrims = [("rs" , forceAndShow . rs )
+           ,("cnt", forceAndShow . cnt)
+           ]
            
-run_ICC = run (\_-> icc2)
-              icc2Prims
+run_ICC = run (\_-> icc)
+              iccPrims
               ["rs","cnt"]
              
-runI_ICC = runI (\_-> icc2)
-                icc2Prims
+runI_ICC = runI (\_-> icc)
+                iccPrims
 
            
-runICC_d1 = run_ICC d1
+run_ICC_d1 = run_ICC d1
 
 
 
@@ -86,6 +86,7 @@ run mkModule prims syms contents =
     Right () -> do
                 putStrLn ("program exited cleanly")
 
+
 ---- run Optimal module interactively ------------------------------
                   
 -- | runI mod prims inputString - run interactively
@@ -112,7 +113,7 @@ runI mkModule prims contents =
               liftIO $ putStrLn $ " allowable: " ++ show (map fst prims)
             Just f  ->
               do
-              liftIO $ putStrLn $ unwords [ "========== GET "
+              liftIO $ putStrLn $ unwords [ "========== GET"
                                           , sym
                                           , "=========="
                                           ]

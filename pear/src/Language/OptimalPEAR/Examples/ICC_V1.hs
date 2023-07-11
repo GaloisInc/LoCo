@@ -49,11 +49,14 @@ throwE' :: Monad m => Errors -> FailT m a
 throwE' es = FailT $ E.throwE es
 
 
+---- spell combinators nicer, :-) ------------------------------------
+
 app :: Monad m => RgnPrsr_FxdWd_NoFlT m a -> Region -> FailT m a
 app p r = lift_NoFlT $ app_FxdWd_NoFlT p r 
 
 pWord32 :: Monad m => RgnPrsr_FxdWd_NoFlT m Word32
 pWord32 = pWord32_FxdWd_NoFlT
+
   
 ---- Example: ICC (in the tinman MEP style) ------------------------
 
