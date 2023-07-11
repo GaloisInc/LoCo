@@ -73,6 +73,7 @@ test-suite locc-test
 
     other-modules:
         Test.Language.LoCoEssential.Essence
+        Test.Language.Optimal.Parse
     
     build-depends:
         base ^>=4.16.4.0,
@@ -81,4 +82,5 @@ test-suite locc-test
         QuickCheck ^>=2.14.2,
         tasty ^>=1.4.3,
         tasty-hunit ^>=0.10.0.3,
-        tasty-quickcheck ^>=0.10.2
+        tasty-quickcheck ^>=0.10.2,
+        text ^>=1.2.5.0
