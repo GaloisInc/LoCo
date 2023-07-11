@@ -34,25 +34,18 @@ data RHS m v =
    , func :: [v] -> m v
    }
 
-f_FuncPure :: Monad m => ([v] -> v         )           -> [v] -> FailT m v
-f_FuncFail :: Monad m => ([v] -> Possibly v)           -> [v] -> FailT m v
-f_PrimNoFl :: Monad m => ([v] -> m v       )           -> [v] -> m v
-f_PrimFail :: Monad m => ([v] -> FailT m (Possibly v)) -> [v] -> FailT m v
-
--- FIXME: abstract: ?
+f_FuncPure :: Monad m => v                    -> FailT m v
+f_FuncFail :: Monad m => Possibly v           -> FailT m v
+f_PrimFail :: Monad m => FailT m (Possibly v) -> FailT m v
 
 except' :: Monad m => Possibly a -> FailT m a
 except' e = FailT $ E.except e
 
-f_FuncPure f vs = return $ f vs
-
-f_FuncFail f vs = except' (f vs)
-                    
-f_PrimNoFl f = f
-
-f_PrimFail f vs = do
-                  v <- f vs
-                  except' v
+f_FuncPure = return
+f_FuncFail = except'
+f_PrimFail m = do
+               v <- m
+               except' v
 
 app :: Monad m => RgnPrsr_FxdWd_NoFlT m a -> Region -> FailT m a
 app p r = lift_NoFlT $ app_FxdWd_NoFlT p r 
@@ -77,24 +70,25 @@ icc r0 =
     wCnt = width_FxdWd pWord32_FxdWd_NoFl
   in 
   [ "R_CNT,R2" -->
-         E [] $ f_FuncFail $
+         E [] $ 
          \[] -> 
+         f_FuncFail $
          do
          (r1,r2) <- {- E.except $ -}
                     R.split1_Possibly r0 wCnt
          return $ VRS [r1,r2]
 
   , "cnt" -->
-        E ["R_CNT,R2"] $ f_PrimNoFl $
+        E ["R_CNT,R2"] $ 
         \[VRS [r_cnt,_]]-> 
         VW <$> app pWord32_FxdWd_NoFlT r_cnt
 
   , "tbl,R3" -->
-        E ["R_CNT,R2","cnt"] $ f_PrimFail $
+        E ["R_CNT,R2","cnt"] $ 
         \[VRS [_r_cnt,r2], VW cnt]-> 
+        f_PrimFail $
         do
         let lpTbl = pMany_FxdWd_NoFlT (fromIntegral cnt) pTwoWords_FxdWd_NoFlT
-                    -- NOTE, a _NoFl parser (not applied to region yet)
         case R.split1_Possibly r2 (width_FxdWd lpTbl) of
           Right (r_tbl, r3) ->
               do
@@ -104,24 +98,24 @@ icc r0 =
               return $ Left ms
               
   , "tbl" -->
-        E ["tbl,R3"] $ f_FuncPure $
+        E ["tbl,R3"] $ 
         \[VL[tbl,_r3]]->
-          tbl
+          return tbl
         
   , "R3" -->
-        E ["tbl,R3"] $ f_FuncPure $
+        E ["tbl,R3"] $ 
         \[VL[_tbl,r3]]->
-          r3
+          return r3
         
   , "R_TEDS" -->
-        E ["tbl"] $ f_FuncFail $
+        E ["tbl"] $ 
         \[VTBL tbl]-> 
-          VRS <$>
+          f_FuncFail $ VRS <$>
           (forM tbl $
             \(loc,sz)-> R.subRegion_Possibly r0 (toLoc loc) (toLoc sz))
   
    , "teds" -->
-        E ["R_TEDS"] $ f_PrimNoFl $
+        E ["R_TEDS"] $ 
         \[VRS r_teds]-> 
            do
            teds <- forM r_teds $
@@ -129,8 +123,9 @@ icc r0 =
            return $ VTEDS teds
            
   , "RS_MERGEDDISJ" -->
-        E ["R_CNT,R2","R3","R_TEDS"] $ f_FuncFail $
+        E ["R_CNT,R2","R3","R_TEDS"] $ 
         \[VRS[r_cnt,r2], VR r3, VRS r_teds] -> 
+        f_FuncFail $
         do
         let r_tbl = r2 `R.regionMinusSuffix` r3
         crs <- elaboratePossibly ["TED values are not disjoint:"]
@@ -138,8 +133,9 @@ icc r0 =
         return $ VCRS crs
         
   , "CAVITYFREE" -->
-        E ["RS_MERGEDDISJ"] $ f_FuncFail $
+        E ["RS_MERGEDDISJ"] $ 
         \[VCRS crs] -> 
+        f_FuncFail $
         do
         let cavities = r0 `R.complementCRs` crs
         case cavities of
@@ -149,9 +145,9 @@ icc r0 =
                              ] ++ map ((" "++) . R.ppRegion) rs
 
   , "teds_safe" -->
-        E ["teds", "CAVITYFREE"] $ f_FuncPure $
+        E ["teds", "CAVITYFREE"] $ 
         \[teds,VB True]->
-        teds
+        return teds
         -- note: cavityFree must have succeeded.
   ]
 
