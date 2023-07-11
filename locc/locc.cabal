@@ -70,6 +70,9 @@ test-suite locc-test
     type: exitcode-stdio-1.0
     hs-source-dirs: test
     main-is: Main.hs
+
+    other-modules:
+        Test.Language.LoCoEssential.Essence
     
     build-depends:
         base ^>=4.16.4.0,
