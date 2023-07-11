@@ -67,7 +67,7 @@ icc2 :: MonadIO m => FailT m (ICC (FailT m))
 {-
 A couple locc/Optimal issues:
 
- FIXME: parsing error when I try to inline TBLR.
+ FIXME: parsing error when I try to inline type synonym TBLR inside optimal.
 
  FIXME: when cntRs' inlined, get
      Exception when trying to run compile-time code:
