@@ -73,13 +73,44 @@ parseOptimalTypeDecl =
     (name, ty) <- parseBinop parseTyName (single '=') parseOptimalType
     pure TypeDecl {tdName = name, tdType = ty}
 
+{-
+Type -> <str>
+      | { <str>: Type }
+      | [Type]
+      | Type "->" Type
+
+-->
+
+Type -> T T'
+
+T -> <str>
+   | { <str>: Type }
+   | [Type]
+
+T' -> "->" Type
+    | epsilon
+-}
 parseOptimalType :: Parser Type
-parseOptimalType =
-  choice
-    [ List <$> between (ignore (single '[')) (ignore (single ']')) parseOptimalType,
-      Alias <$> parseTyName,
-      Rec <$> parseTypeBindings parseOptimalType
-    ]
+parseOptimalType = t >>= t'
+  where
+    t :: Parser Type
+    t =
+      choice
+        [ List <$> bracketed parseOptimalType,
+          Rec <$> parseBindings (single ':') parseOptimalType,
+          Alias <$> parseTyName
+        ]
+        <* ws
+
+    t' :: Type -> Parser Type
+    t' ty =
+      choice
+        [ ignore (chunk "->") >> Arrow ty <$> parseOptimalType,
+          pure ty
+        ]
+        <* ws
+
+    bracketed = between (ignore (single '[')) (ignore (single ']'))
 
 -------------------------------------------------------------------------------
 
