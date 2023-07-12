@@ -4,8 +4,6 @@
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-  -- FIXME!
 
 module Language.OptimalPEAR.Examples.ICC_Optimal where
 
@@ -14,22 +12,20 @@ import           Control.Monad
 import           Data.IORef
 import           Data.Word
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Identity
-import           Control.Monad.Trans.Except
-import           Data.Word (Word64, Word8)
 import           System.IO.Unsafe (unsafePerformIO)
 
 -- package locc (optimal):
 import           Language.Optimal.Quote (optimal)
 import           Thunk.RefVal (Thunked, delayAction, force)
 
--- local modules:
+-- local PEAR modules:
 import           Language.PEAR.Primitives
 import           Language.PEAR.ParserLibrary
 import           Language.PEAR.Region.API (Region,r_width,CanonicalRegions)
 import qualified Language.PEAR.Region.API as R
-import           Language.PEAR.Types
 import           Language.PEAR.Util
+
+-- ICC things:
 import           Language.OptimalPEAR.Examples.ICC_V1 hiding (icc)
 
 
