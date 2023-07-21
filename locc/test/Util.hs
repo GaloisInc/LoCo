@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
 module Util where
@@ -10,10 +9,3 @@ moduleName =
   do
     modName <- loc_module <$> qLocation
     [|modName|]
-
-moduleName' :: String
-moduleName' =
-  $( do
-       modName <- loc_module <$> qLocation
-       [|modName|]
-   )
