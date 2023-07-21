@@ -23,6 +23,8 @@ library
 
     exposed-modules:
         Language.Optimal.Compile
+        Language.Optimal.Compile.FreeVars
+        Language.Optimal.Compile.Rename
         Language.Optimal.Parse
         Language.Optimal.Quote
         Language.Optimal.Samples
@@ -74,6 +76,7 @@ test-suite locc-test
     other-modules:
         Test.Language.LoCoEssential.Essence
         Test.Language.Optimal.Compile
+        Test.Language.Optimal.Compile.FreeVars
         Test.Language.Optimal.Parse
         Util
     
