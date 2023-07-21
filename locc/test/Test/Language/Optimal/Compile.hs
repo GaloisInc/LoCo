@@ -10,7 +10,6 @@ module Test.Language.Optimal.Compile (tests) where
 import Data.String (IsString (..))
 import Language.Haskell.TH (Name, mkName, runQ)
 import Language.Optimal.Compile (freeVars)
-import System.IO.Unsafe (unsafePerformIO)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Util (moduleName)
@@ -19,11 +18,11 @@ tests :: TestTree
 tests =
   testGroup
     $moduleName
-    [ freeVarTests
+    [ exprFreeVarTests
     ]
 
-freeVarTests :: TestTree
-freeVarTests =
+exprFreeVarTests :: TestTree
+exprFreeVarTests =
   testGroup
     "free variables"
     [ expr "literal" [|3|] mempty,
@@ -40,7 +39,7 @@ freeVarTests =
       expr "cond" [|if x then y else z|] ["x", "y", "z"],
       expr "multi-way-if, simple" [|if | x -> y|] ["x", "y"],
       expr "multi-way-if, shadow" [|if | x -> x|] ["x"],
-      expr "multi-way-if, pattern" [|if | (x, y) <- z -> x|] ["z"],
+      expr "multi-way-if, pattern" [|if | (x, _y) <- z -> x|] ["z"],
       expr "list" [|[x, y]|] ["x", "y"],
       expr "let, simple" [|let x = 3 in x|] mempty,
       expr "let, recurse" [|let x = x in x|] mempty,
@@ -54,9 +53,11 @@ freeVarTests =
     ]
   where
     expr name e expectedFrees =
-      let e' = unsafePerformIO (runQ e)
-          actualFrees = freeVars e'
-       in testCase name (actualFrees @?= expectedFrees)
+      testCase name $
+        do
+          e' <- runQ e
+          let actualFrees = freeVars e'
+          actualFrees @?= expectedFrees
 
 instance IsString Name where
   fromString = mkName
