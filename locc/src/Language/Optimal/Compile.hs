@@ -190,6 +190,9 @@ expFreeVars bindings expr =
     VarE n
       | n `notMember` bindings -> singleton n
       | otherwise -> mempty
+    UnboundVarE n
+      | n `notMember` bindings -> singleton n
+      | otherwise -> mempty
     ConE n -> mempty
     LitE l -> mempty
     AppE e1 e2 -> goExp e1 <> goExp e2
@@ -204,16 +207,20 @@ expFreeVars bindings expr =
     UnboxedTupE es -> foldMap goExp (catMaybes es)
     UnboxedSumE e _ _ -> goExp e
     CondE e1 e2 e3 -> goExp e1 <> goExp e2 <> goExp e3
-    MultiIfE matches -> foldMap (\(guard, e) -> undefined guard <> goExp e) matches
+    MultiIfE matches -> foldMap (\(guard, e) -> goGuard guard <> goExp' (guardBindings guard) e) matches
     ListE es -> foldMap goExp es
     LetE decs e -> foldMap goDec decs <> goExp' (foldMap decBindings decs) e
     CaseE e matches -> goExp e <> foldMap goMatch matches
+    DoE _ [] -> mempty
+    DoE m (stmt : stmts) -> goStmt stmt <> goExp' (stmtBindings stmt) (DoE m stmts)
     _ -> error $ "TODO: finish constructors in `expFreeVars` (failed on " <> take 30 (show expr) <> "...)"
   where
     goExp = expFreeVars bindings
     goExp' bindings' = expFreeVars (bindings' <> bindings)
     goDec = decFreeVars bindings
     goMatch = matchFreeVars bindings
+    goGuard = guardFreeVars bindings
+    goStmt = stmtFreeVars bindings
 
 matchFreeVars :: BindingVars -> Match -> FreeVars
 matchFreeVars bindings mtch =
@@ -226,9 +233,10 @@ bodyFreeVars :: BindingVars -> Body -> FreeVars
 bodyFreeVars bindings bod =
   case bod of
     NormalB e -> expFreeVars bindings e
-    GuardedB gs ->
-      let (guards, exps) = unzip gs
-       in foldMap (guardFreeVars bindings) guards <> foldMap (expFreeVars bindings) exps
+    GuardedB gs -> foldMap (\(guard, e) -> goGuard guard <> goExp (guardBindings guard) e) gs
+  where
+    goGuard = guardFreeVars bindings
+    goExp bindings' = expFreeVars (bindings' <> bindings)
 
 guardFreeVars :: BindingVars -> Guard -> FreeVars
 guardFreeVars bindings guard =
@@ -320,7 +328,7 @@ renameExp f expr =
 renameMatch :: (Name -> Q Name) -> Match -> Q Match
 renameMatch f m =
   case m of
-    Match pat (NormalB expr) decs -> 
+    Match pat (NormalB expr) decs ->
       match (renamePat f pat) (normalB (renameExp f expr)) (map (renameDec f) decs)
     _ -> error $ "TODO: finish constructors in `renameMatch` (failed on " <> take 30 (show m) <> "...)"
 
