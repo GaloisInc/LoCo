@@ -165,6 +165,8 @@ parseTyName :: MonadParsec error Text m => m Symbol
 parseTyName =
   do
     c <- satisfy isUpper
-    cs <- many (satisfy isAlphaNum)
+    cs <- many (satisfy validTyChar)
     ws
     pure (Text.pack (c : cs))
+  where
+    validTyChar c = isAlphaNum c || c == '_'

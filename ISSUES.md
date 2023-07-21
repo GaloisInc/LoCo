@@ -10,8 +10,6 @@
 
 - FIXME: parsing error when I try to inline type synonym TBLR inside optimal.
 
-- FIXME: type synonym TBL_R causes optimal parsing error.
-
 - FIXME: when cntRs' inlined, get
      Exception when trying to run compile-time code:
        TODO: finish constructors in `expFreeVars`
