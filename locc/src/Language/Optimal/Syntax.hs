@@ -23,6 +23,7 @@ data TypeDecl = TypeDecl
 data Type
   = Alias Symbol
   | List Type
+  | Tuple [Type]
   | Arrow Type Type
   | Rec (Env Type)
   deriving (Eq, Show)

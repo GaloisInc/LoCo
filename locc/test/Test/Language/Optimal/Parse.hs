@@ -56,6 +56,11 @@ typeTests =
       testSuccess "fn3" "Int -> Int -> Int" (Arrow int (Arrow int int)),
       testSuccess "rec" "{ foo : Int, bar : Int }" (Rec (Map.fromList [("foo", int), ("bar", int)])),
       testSuccess "with underscore" "Int_2" (Alias "Int_2"),
+      testSuccess "list" "[Int]" (List (Alias "Int")),
+      testSuccess "list of list" "[[Int]]" (List (List (Alias "Int"))),
+      testSuccess "tuple" "(Int,Foo)" (Tuple [Alias "Int", Alias "Foo"]),
+      testSuccess "list of tuple" "[(Int,Foo)]" (List (Tuple [Alias "Int", Alias "Foo"])),
+      testSuccess "tuple of list" "([Int],Foo)" (Tuple [List (Alias "Int"), Alias "Foo"]),
       testFailure "lowercase type" "int",
       testFailure "unterminated record" "{ foo : Int "
     ]

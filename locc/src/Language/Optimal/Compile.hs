@@ -127,6 +127,7 @@ compileOptimalType :: Optimal.Type -> Q TH.Type
 compileOptimalType pty =
   case pty of
     List ty -> [t|[$(compileOptimalType ty)]|]
+    Tuple tys -> foldl1 appT (tupleT (length tys) : map compileOptimalType tys)
     Alias s -> conT (mkName' s)
 
 mkName' :: Text -> Name

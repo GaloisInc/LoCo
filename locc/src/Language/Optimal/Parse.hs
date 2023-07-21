@@ -77,6 +77,7 @@ parseOptimalTypeDecl =
 Type -> <str>
       | { <str>: Type }
       | [Type]
+      | (Type,...)
       | Type "->" Type
 
 -->
@@ -86,6 +87,7 @@ Type -> T T'
 T -> <str>
    | { <str>: Type }
    | [Type]
+   | (Type,...)
 
 T' -> "->" Type
     | epsilon
@@ -97,6 +99,7 @@ parseOptimalType = t >>= t'
     t =
       choice
         [ List <$> bracketed parseOptimalType,
+          Tuple <$> parenthesized (sepBy1 parseOptimalType (ignore (single ','))),
           Rec <$> parseBindings (single ':') parseOptimalType,
           Alias <$> parseTyName
         ]
@@ -111,6 +114,7 @@ parseOptimalType = t >>= t'
         <* ws
 
     bracketed = between (ignore (single '[')) (ignore (single ']'))
+    parenthesized = between (ignore (single '(')) (ignore (single ')'))
 
 -------------------------------------------------------------------------------
 
