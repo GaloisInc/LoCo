@@ -13,11 +13,12 @@ import Language.Optimal.Compile (freeVars)
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
+import Util (moduleName)
 
 tests :: TestTree
 tests =
   testGroup
-    "Test.Language.Optimal.Compile"
+    $moduleName
     [ freeVarTests
     ]
 

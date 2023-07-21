@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Test.Language.Optimal.Parse (tests) where
 
@@ -8,11 +9,12 @@ import Language.Optimal.Parse
 import Language.Optimal.Syntax (Type (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit
+import Util (moduleName)
 
 tests :: TestTree
 tests =
   testGroup
-    "Test.Language.Optimal.Parse"
+    $moduleName
     [ varNameTests,
       typeTests
     ]

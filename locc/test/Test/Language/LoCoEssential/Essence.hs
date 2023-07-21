@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Language.LoCoEssential.Essence (tests) where
@@ -12,7 +13,7 @@ import Language.LoCoEssential.Essence (Env, FreeVars, LoCoModule (..), RHS (RHSE
 import Language.LoCoEssential.Interp.Lazy qualified as Lazy
 import Language.LoCoEssential.Interp.Trad qualified as Trad
 import Language.LoCoEssential.SimpleExpr.Expr qualified as Simple
-import Test.Tasty (TestTree)
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck
   ( Arbitrary (..),
     Gen,
@@ -24,9 +25,14 @@ import Test.Tasty.QuickCheck
     suchThatMap,
     testProperty,
   )
+import Util (moduleName)
 
 tests :: TestTree
-tests = testProperty "Test.Language.LoCoEssential.Essence" lazyMatchesTraditionalProperty
+tests =
+  testGroup
+    $moduleName
+    [ testProperty "trad/lazy evaluations match" lazyMatchesTraditionalProperty
+    ]
 
 lazyMatchesTraditionalProperty :: LoCoModule Simple.Expr -> Property
 lazyMatchesTraditionalProperty = ioProperty . lazyMatchesTraditional
