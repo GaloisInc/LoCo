@@ -3,6 +3,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Language.Optimal.Compile where
@@ -14,6 +15,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
+import GHC.Exts
 import Language.Haskell.TH
 import Language.Haskell.TH qualified as TH
 import Language.LoCo.Toposort (topoSortPossibly)
@@ -152,10 +154,10 @@ class Monoid c => Collection c e | c -> e where
 -------------------------------------------------------------------------------
 
 newtype FreeVars = FreeVars (Set Name)
-  deriving (Show)
+  deriving (Eq, Show)
 
 newtype BindingVars = BindingVars (Set Name)
-  deriving (Show)
+  deriving (Eq, Show)
 
 instance Semigroup FreeVars where
   FreeVars f1 <> FreeVars f2 = FreeVars (f1 <> f2)
@@ -176,6 +178,16 @@ instance Collection FreeVars Name where
 instance Collection BindingVars Name where
   member e (BindingVars bvs) = Set.member e bvs
   insert e (BindingVars bvs) = BindingVars (Set.insert e bvs)
+
+instance IsList FreeVars where
+  type Item FreeVars = Name
+  fromList names = FreeVars (Set.fromList names)
+  toList (FreeVars fvs) = Set.toList fvs
+
+instance IsList BindingVars where
+  type Item BindingVars = Name
+  fromList names = BindingVars (Set.fromList names)
+  toList (BindingVars bvs) = Set.toList bvs
 
 -------------------------------------------------------------------------------
 
