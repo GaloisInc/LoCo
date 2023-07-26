@@ -63,17 +63,20 @@ parseOptimalModuleDecl :: Parser ModuleDecl
 parseOptimalModuleDecl =
   do
     (modName, tyName) <- parseOptimalTypeAscription
-    (modName', binds) <- parseBinop (chunk modName) (single '=') (parseBindings (single '=') parseHSExpr)
+    (modName', binds) <- parseBind (chunk modName) parseOptimalModuleBindings
     pure ModuleDecl {modTyName = tyName, modTy = Nothing, modName = modName', modEnv = binds}
 
 parseOptimalTypeAscription :: Parser (Symbol, Symbol)
 parseOptimalTypeAscription = parseBinop parseVarName (single ':') parseTyName
 
+parseOptimalModuleBindings :: Parser (Env Exp)
+parseOptimalModuleBindings = parseBindings (single '=') parseHSExpr
+
 parseOptimalTypeDecl :: Parser TypeDecl
 parseOptimalTypeDecl =
   do
     ignore (chunk "type")
-    (name, ty) <- parseBinop parseTyName (single '=') parseOptimalType
+    (name, ty) <- parseBind parseTyName parseOptimalType
     pure TypeDecl {tdName = name, tdType = ty}
 
 {-
@@ -103,7 +106,7 @@ parseOptimalType = t >>= t'
       choice
         [ List <$> bracketed parseOptimalType,
           Tuple <$> parenthesized (sepBy1 parseOptimalType (ignore (single ','))),
-          Rec <$> parseBindings (single ':') parseOptimalType,
+          Rec <$> parseOptimalRecordType,
           Alias <$> parseTyName
         ]
         <* ws
@@ -118,6 +121,9 @@ parseOptimalType = t >>= t'
 
     bracketed = between (ignore (single '[')) (ignore (single ']'))
     parenthesized = between (ignore (single '(')) (ignore (single ')'))
+
+parseOptimalRecordType :: Parser (Env Type)
+parseOptimalRecordType = parseBindings (single ':') parseOptimalType
 
 -------------------------------------------------------------------------------
 
@@ -155,6 +161,12 @@ parseBinop parseLhs parseOp parseRhs =
     rhs <- parseRhs
     ws
     pure (lhs, rhs)
+
+parseBind :: Parser lhs -> Parser rhs -> Parser (lhs, rhs)
+parseBind lhs = parseBinop lhs (single '=')
+
+parseAscription :: Parser lhs -> Parser rhs -> Parser (lhs, rhs)
+parseAscription lhs = parseBinop lhs (single ':')
 
 -------------------------------------------------------------------------------
 

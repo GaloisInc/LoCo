@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -19,7 +20,8 @@ tests =
     [ varNameTests,
       typeTests,
       exprTests,
-      modTypeTests
+      modTypeTests,
+      modBindingTests
     ]
 
 testParseSuccess :: (Eq a, Show a) => Parser a -> Text -> a -> Assertion
@@ -96,7 +98,33 @@ modTypeTests :: TestTree
 modTypeTests =
   testGroup
     "module types"
-    [testSuccess "type ascription" "foo : Foo" ("foo", "Foo")]
+    [ testSuccess "simple type ascription" "foo : Foo" ("foo", "Foo"),
+      testFailure "lowercase type ascription" "foo : foo"
+    ]
   where
     testSuccess name source expected =
       testCase name (testParseSuccess parseOptimalTypeAscription source expected)
+    testFailure name source =
+      testCase name (testParseFailure parseOptimalTypeAscription source)
+
+modBindingTests :: TestTree
+modBindingTests =
+  testGroup
+    "module bindings"
+    [ testSuccess
+        "single binding"
+        "{ x = <| pure 3 |> }"
+        [("x", AppE (VarE (mkName "pure")) (LitE (IntegerL 3)))],
+      testSuccess
+        "multiple bindings"
+        "{ x = <| pure 3 |>, y = <| pure 'a' |> }"
+        [ ("x", AppE (VarE (mkName "pure")) (LitE (IntegerL 3))),
+          ("y", AppE (VarE (mkName "pure")) (LitE (CharL 'a')))
+        ],
+      testFailure "empty bindings" "{ }"
+    ]
+  where
+    testSuccess name source expected =
+      testCase name (testParseSuccess parseOptimalModuleBindings source expected)
+    testFailure name source =
+      testCase name (testParseFailure parseOptimalModuleBindings source)
