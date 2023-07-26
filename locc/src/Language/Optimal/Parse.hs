@@ -62,9 +62,12 @@ expandTypes types = mapM expandType
 parseOptimalModuleDecl :: Parser ModuleDecl
 parseOptimalModuleDecl =
   do
-    (modName, tyName) <- parseBinop parseVarName (single ':') parseTyName
+    (modName, tyName) <- parseOptimalTypeAscription
     (modName', binds) <- parseBinop (chunk modName) (single '=') (parseBindings (single '=') parseHSExpr)
     pure ModuleDecl {modTyName = tyName, modTy = Nothing, modName = modName', modEnv = binds}
+
+parseOptimalTypeAscription :: Parser (Symbol, Symbol)
+parseOptimalTypeAscription = parseBinop parseVarName (single ':') parseTyName
 
 parseOptimalTypeDecl :: Parser TypeDecl
 parseOptimalTypeDecl =

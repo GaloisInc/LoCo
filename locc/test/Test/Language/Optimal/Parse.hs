@@ -18,7 +18,8 @@ tests =
     $moduleName
     [ varNameTests,
       typeTests,
-      exprTests
+      exprTests,
+      modTypeTests
     ]
 
 testParseSuccess :: (Eq a, Show a) => Parser a -> Text -> a -> Assertion
@@ -90,3 +91,12 @@ exprTests =
           testParseSuccess parseHSExpr source expr'
     testFailure name source =
       testCase name (testParseFailure parseHSExpr source)
+
+modTypeTests :: TestTree
+modTypeTests =
+  testGroup
+    "module types"
+    [testSuccess "type ascription" "foo : Foo" ("foo", "Foo")]
+  where
+    testSuccess name source expected =
+      testCase name (testParseSuccess parseOptimalTypeAscription source expected)
