@@ -5,6 +5,7 @@ module Test.Language.Optimal.Parse (tests) where
 
 import Data.Map qualified as Map
 import Data.Text (Text)
+import Language.Haskell.TH.Syntax
 import Language.Optimal.Parse
 import Language.Optimal.Syntax (Type (..))
 import Test.Tasty (TestTree, testGroup)
@@ -16,7 +17,8 @@ tests =
   testGroup
     $moduleName
     [ varNameTests,
-      typeTests
+      typeTests,
+      exprTests
     ]
 
 testParseSuccess :: (Eq a, Show a) => Parser a -> Text -> a -> Assertion
@@ -28,8 +30,8 @@ testParseSuccess p on expected =
 testParseFailure :: (Eq a, Show a) => Parser a -> Text -> Assertion
 testParseFailure p on =
   case runParser p on of
-    Left err -> pure ()
-    Right actual -> assertFailure "parsing succeeded"
+    Left _err -> pure ()
+    Right _ -> assertFailure "parsing succeeded when it was expected to fail"
 
 varNameTests :: TestTree
 varNameTests =
@@ -70,3 +72,21 @@ typeTests =
       testCase name (testParseSuccess parseOptimalType source expected)
     testFailure name source =
       testCase name (testParseFailure parseOptimalType source)
+
+exprTests :: TestTree
+exprTests =
+  testGroup
+    "expressions"
+    [ testSuccess "literal" "<| 3 |>" [e|3|],
+      -- This fails because it wants `Just` to parse as qualified (GHC.Maybe.Just)...
+      -- testSuccess "application" "<| Just 1 |>" [e|Just 1|],
+      testFailure "unterminated" "<| 3"
+    ]
+  where
+    testSuccess name source expr =
+      testCase name $
+        do
+          expr' <- runQ expr
+          testParseSuccess parseHSExpr source expr'
+    testFailure name source =
+      testCase name (testParseFailure parseHSExpr source)
