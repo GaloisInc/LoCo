@@ -8,7 +8,7 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Language.Haskell.TH.Syntax
 import Language.Optimal.Parse
-import Language.Optimal.Syntax (Type (..))
+import Language.Optimal.Syntax (ModuleDecl (..), Type (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit
 import Util (moduleName)
@@ -21,7 +21,8 @@ tests =
       typeTests,
       exprTests,
       modTypeTests,
-      modBindingTests
+      modBindingTests,
+      modTyUnaliasTests
     ]
 
 testParseSuccess :: (Eq a, Show a) => Parser a -> Text -> a -> Assertion
@@ -128,3 +129,30 @@ modBindingTests =
       testCase name (testParseSuccess parseOptimalModuleBindings source expected)
     testFailure name source =
       testCase name (testParseFailure parseOptimalModuleBindings source)
+
+modTyUnaliasTests :: TestTree
+modTyUnaliasTests =
+  testGroup
+    "unaliasing types"
+    [ testSuccess "no alias" mempty fooModule fooTy,
+      testSuccess "single-level alias" fooAliasIsFoo (fooModuleWithAlias fooAlias) fooTy,
+      testSuccess "double-level alias" fooAliasIsBarAlias (fooModuleWithAlias barAlias) barTy
+    ]
+  where
+    testSuccess name tyEnv source expected =
+      let result = unaliasTypes tyEnv [source]
+       in testCase name $
+            case result of
+              Left err -> assertFailure err
+              Right [ModuleDecl {..}] -> expected @=? modTy
+              Right actuals -> assertFailure "this shouldn't happen"
+    fooModule =
+      ModuleDecl {modTyName = fooAlias, modTy = fooTy, modName = "foo", modEnv = mempty}
+    fooModuleWithAlias alias =
+      ModuleDecl {modTyName = alias, modTy = Alias alias, modName = "foo", modEnv = mempty}
+    fooAlias = "Foo"
+    barAlias = "Foo"
+    fooTy = Rec [("x", Alias "Int")]
+    barTy = Rec [("y", Alias "Char")]
+    fooAliasIsFoo = [(fooAlias, fooTy)]
+    fooAliasIsBarAlias = [(fooAlias, Alias barAlias), (barAlias, barTy)]

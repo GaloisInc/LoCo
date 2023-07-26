@@ -8,11 +8,11 @@ import Language.Haskell.TH (Exp)
 
 data ModuleDecl = ModuleDecl
   { modTyName :: Symbol,
-    modTy :: Maybe Type,
+    modTy :: Type,
     modName :: Symbol,
     modEnv :: Env Exp
   }
-  deriving (Show)
+  deriving (Eq, Show)
 
 data TypeDecl = TypeDecl
   { tdName :: Symbol,

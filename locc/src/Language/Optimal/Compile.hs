@@ -10,12 +10,10 @@ module Language.Optimal.Compile where
 
 import Control.Monad.IO.Class
 import Data.Map qualified as Map
-import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import GHC.Exts
 import Language.Haskell.TH
 import Language.Haskell.TH qualified as TH
 import Language.LoCo.Toposort (topoSortPossibly)
@@ -36,9 +34,8 @@ compileOptimalModuleDecl ModuleDecl {..} =
           ]
     binds <- sequence [compileBind modBinds name (modNameEnv Map.! name) | name <- orderedModNames]
     recConstr <- case modTy of
-      Just (Rec tyEnv) -> compileRecConstr (mkName' modTyName) tyEnv
-      Just _ -> fail ""
-      Nothing -> fail ""
+      Rec tyEnv -> compileRecConstr (mkName' modTyName) tyEnv
+      _ -> fail "cannot compile module with non-record type"
     result <- noBindS [|pure $(pure recConstr)|]
     let body = DoE Nothing (binds <> [result])
         decl = FunD funName [Clause mempty (NormalB body) mempty]

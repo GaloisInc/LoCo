@@ -8,7 +8,7 @@ import Data.Text qualified as Text
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Language.Optimal.Compile (compileOptimalModuleDecl, compileOptimalTypeDecl)
-import Language.Optimal.Parse (parseOptimal)
+import Language.Optimal.Parse (parseOptimal')
 
 optimal :: QuasiQuoter
 optimal =
@@ -22,7 +22,7 @@ optimal =
 decls :: String -> Q [Dec]
 decls src =
   do
-    (tyDecls, modDecls) <- either fail pure (parseOptimal (Text.pack src'))
+    (tyDecls, modDecls) <- either fail pure (parseOptimal' (Text.pack src'))
     tyQDecs <- mapM compileOptimalTypeDecl tyDecls
     modQDecs <- mapM compileOptimalModuleDecl modDecls
     pure $ concat (tyQDecs ++ modQDecs)
