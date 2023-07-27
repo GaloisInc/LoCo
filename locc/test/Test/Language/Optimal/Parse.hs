@@ -9,6 +9,7 @@ import Data.Text (Text)
 import Language.Haskell.TH.Syntax
 import Language.Optimal.Parse
 import Language.Optimal.Syntax (ModuleDecl (..), Type (..))
+import Language.Optimal.Typecheck (expandTypes)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit
 import Util (moduleName)
@@ -22,7 +23,8 @@ tests =
       exprTests,
       modTypeTests,
       modBindingTests,
-      modTyUnaliasTests
+      modBodyTests
+      -- modTyUnaliasTests
     ]
 
 testParseSuccess :: (Eq a, Show a) => Parser a -> Text -> a -> Assertion
@@ -99,14 +101,41 @@ modTypeTests :: TestTree
 modTypeTests =
   testGroup
     "module types"
-    [ testSuccess "simple type ascription" "foo : Foo" ("foo", "Foo"),
+    [ testSuccess "simple type ascription" "foo : Foo" ("foo", Alias "Foo"),
       testFailure "lowercase type ascription" "foo : foo"
     ]
   where
     testSuccess name source expected =
-      testCase name (testParseSuccess parseOptimalTypeAscription source expected)
+      testCase name (testParseSuccess parseOptimalModuleTypeAscription source expected)
     testFailure name source =
-      testCase name (testParseFailure parseOptimalTypeAscription source)
+      testCase name (testParseFailure parseOptimalModuleTypeAscription source)
+
+modBodyTests :: TestTree
+modBodyTests =
+  testGroup
+    "module bodies"
+    [ testSuccess
+        "no parameters"
+        "foo = { x = <| pure 3 |> }"
+        "foo"
+        mempty
+        [("x", AppE (VarE (mkName "pure")) (LitE (IntegerL 3)))],
+      testSuccess
+        "one parameter"
+        "foo y = { x = <| pure y |> }"
+        "foo"
+        ["y"]
+        [("x", AppE (VarE (mkName "pure")) (VarE (mkName "y")))],
+      testSuccess
+        "multiple parameters"
+        "foo y z = { x = <| pure y |> }"
+        "foo"
+        ["y", "z"]
+        [("x", AppE (VarE (mkName "pure")) (VarE (mkName "y")))]
+    ]
+  where
+    testSuccess name source expectedName expectedParams expectedBinds =
+      testCase name (testParseSuccess (parseOptimalModuleBody expectedName) source (expectedParams, expectedBinds))
 
 modBindingTests :: TestTree
 modBindingTests =
@@ -129,30 +158,3 @@ modBindingTests =
       testCase name (testParseSuccess parseOptimalModuleBindings source expected)
     testFailure name source =
       testCase name (testParseFailure parseOptimalModuleBindings source)
-
-modTyUnaliasTests :: TestTree
-modTyUnaliasTests =
-  testGroup
-    "unaliasing types"
-    [ testSuccess "no alias" mempty fooModule fooTy,
-      testSuccess "single-level alias" fooAliasIsFoo (fooModuleWithAlias fooAlias) fooTy,
-      testSuccess "double-level alias" fooAliasIsBarAlias (fooModuleWithAlias barAlias) barTy
-    ]
-  where
-    testSuccess name tyEnv source expected =
-      let result = unaliasTypes tyEnv [source]
-       in testCase name $
-            case result of
-              Left err -> assertFailure err
-              Right [ModuleDecl {..}] -> expected @=? modTy
-              Right actuals -> assertFailure "this shouldn't happen"
-    fooModule =
-      ModuleDecl {modTyName = fooAlias, modTy = fooTy, modName = "foo", modEnv = mempty}
-    fooModuleWithAlias alias =
-      ModuleDecl {modTyName = alias, modTy = Alias alias, modName = "foo", modEnv = mempty}
-    fooAlias = "Foo"
-    barAlias = "Foo"
-    fooTy = Rec [("x", Alias "Int")]
-    barTy = Rec [("y", Alias "Char")]
-    fooAliasIsFoo = [(fooAlias, fooTy)]
-    fooAliasIsBarAlias = [(fooAlias, Alias barAlias), (barAlias, barTy)]

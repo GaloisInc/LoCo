@@ -8,7 +8,6 @@
 
 module Language.Optimal.Compile where
 
-import Control.Monad.IO.Class
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -33,20 +32,28 @@ compileOptimalModuleDecl ModuleDecl {..} =
               let fvs = Set.toList (freeVars expr `Set.intersection` modBinds)
           ]
     binds <- sequence [compileBind modBinds name (modNameEnv Map.! name) | name <- orderedModNames]
-    recConstr <- case modTy of
-      Rec tyEnv -> compileRecConstr (mkName' modTyName) tyEnv
-      _ -> fail "cannot compile module with non-record type"
-    result <- noBindS [|pure $(pure recConstr)|]
-    let body = DoE Nothing (binds <> [result])
-        decl = FunD funName [Clause mempty (NormalB body) mempty]
-    sigTy <- [t|forall m. MonadIO m => m $(appT (conT (mkName' modTyName)) [t|m|])|]
-    sig <- sigD funName (pure sigTy)
+    modOriginalResult <- result modOriginalTy
+    modExpandedResult <- result modExpandedTy
+    recordResult <-
+      case (modOriginalResult, modExpandedResult) of
+        (Alias alias, Rec tyEnv) -> compileRecConstr (mkName' alias) tyEnv
+        _ -> fail "cannot compile module with non-record result type"
+    ret <- noBindS [|pure $(pure recordResult)|]
+    let body = DoE Nothing (binds <> [ret])
+        params = [VarP (mkName' p) | p <- modParams]
+        decl = FunD funName [Clause params (NormalB body) mempty]
+    -- sigTy <- [t|forall m. MonadIO m => m $(appT (conT (mkName' modTyName)) [t|m|])|]
+    -- sig <- sigD funName (pure sigTy)
     -- pure [sig, decl]
     pure [decl]
   where
     funName = mkName' modName
     modNameEnv = Map.mapKeys mkName' modEnv
     modBinds = Map.keysSet modNameEnv
+    result ty =
+      case ty of
+        Arrow _ t2 -> result t2
+        _ -> pure ty
 
 compileBind :: Set Name -> Name -> Exp -> Q Stmt
 compileBind modBindings name expr =

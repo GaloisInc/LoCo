@@ -47,41 +47,26 @@ parseOptimal text =
     decls <- runParser (many (eitherP parseOptimalTypeDecl parseOptimalModuleDecl)) text
     pure (partitionEithers decls)
 
--- | Parse a sequence of Optimal module and type declarations, and try to
--- dealias the type synonyms with which modules are declared.
-parseOptimal' :: Text -> Either String ([TypeDecl], [ModuleDecl])
-parseOptimal' text =
-  do
-    (typeDecls, moduleDecls) <- parseOptimal text
-    let tyEnv = Map.fromList [(tdName, tdType) | TypeDecl {..} <- typeDecls]
-    typedModuleDecls <- unaliasTypes tyEnv moduleDecls
-    pure (typeDecls, typedModuleDecls)
-
--- | For modules declared with a type alias, try to replace the alias with the
--- full type it names.
-unaliasTypes :: Env Type -> [ModuleDecl] -> Either String [ModuleDecl]
-unaliasTypes types = mapM expandType
-  where
-    expandType md@ModuleDecl {..} =
-      case modTy of
-        Alias alias ->
-          case types Map.!? alias of
-            Nothing -> Left $ "couldn't find type associated with alias " <> show alias <> " in module " <> Text.unpack modName
-            Just ty -> expandType md {modTy = ty}
-        Rec _ -> Right md
-        _ -> Left $ "cannot assign non-record type " <> show modTy <> " to module " <> Text.unpack modName
-
 -------------------------------------------------------------------------------
 
 parseOptimalModuleDecl :: Parser ModuleDecl
 parseOptimalModuleDecl =
   do
-    (modName, tyName) <- parseOptimalTypeAscription
-    (modName', binds) <- parseBind (chunk modName) parseOptimalModuleBindings
-    pure ModuleDecl {modTyName = tyName, modTy = Alias tyName, modName = modName', modEnv = binds}
+    (modName, modTy) <- parseOptimalModuleTypeAscription
+    (modParams, binds) <- parseOptimalModuleBody modName
+    pure ModuleDecl {modOriginalTy = modTy, modExpandedTy = modTy, modName = modName, modParams = modParams, modEnv = binds}
 
-parseOptimalTypeAscription :: Parser (Symbol, Symbol)
-parseOptimalTypeAscription = parseBinop parseVarName (single ':') parseTyName
+parseOptimalModuleTypeAscription :: Parser (Symbol, Type)
+parseOptimalModuleTypeAscription = parseBinop parseVarName (single ':') parseOptimalType
+
+parseOptimalModuleBody :: Symbol -> Parser ([Symbol], Env Exp)
+parseOptimalModuleBody modName =
+  do
+    ignore (chunk modName)
+    params <- many parseVarName
+    ignore (single '=')
+    body <- parseOptimalModuleBindings
+    pure (params, body)
 
 parseOptimalModuleBindings :: Parser (Env Exp)
 parseOptimalModuleBindings = parseBindings (single '=') parseHSExpr

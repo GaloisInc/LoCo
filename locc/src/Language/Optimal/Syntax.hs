@@ -7,9 +7,10 @@ import Data.Text (Text)
 import Language.Haskell.TH (Exp)
 
 data ModuleDecl = ModuleDecl
-  { modTyName :: Symbol,
-    modTy :: Type,
+  { modOriginalTy :: Type, -- ^ the type as the user wrote it
+    modExpandedTy :: Type, -- ^ the type with all aliases expanded
     modName :: Symbol,
+    modParams :: [Symbol],
     modEnv :: Env Exp
   }
   deriving (Eq, Show)
