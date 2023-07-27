@@ -3,6 +3,7 @@
 
 module Language.Optimal.Quote where
 
+import Data.Char (isSpace)
 import Data.List (isPrefixOf)
 import Data.Text qualified as Text
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -29,7 +30,11 @@ decls src =
     modQDecs <- mapM compileOptimalModuleDecl typedModDecls
     pure $ concat (tyQDecs ++ modQDecs)
   where
-    src' = stripComments "--" src
-
-stripComments :: String -> String -> String
-stripComments prefix = unlines . filter (not . (prefix `isPrefixOf`)) . lines
+    comment = "--"
+    src' = stripComments src
+    stripComments =
+      unlines
+        . map (\l -> if startsWithComment l then "" else l)
+        . lines
+      where
+        startsWithComment l = comment `isPrefixOf` dropWhile isSpace l
