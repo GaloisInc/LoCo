@@ -1,16 +1,42 @@
-module Language.Optimal.Compile.Haskell.CollectBindings (CollectBindings (..)) where
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 
+module Language.Optimal.Compile.Haskell.CollectBindings where
+
+import Data.Set (Set)
+import Data.Set qualified as Set
+import GHC.Exts (IsList (..))
 import Language.Haskell.TH
 import Language.Optimal.Compile.Collections
 
 unimplemented :: Show a => String -> a -> b
 unimplemented fn thing =
   error $
-    "TODO: CollectBindings: finish constructors in `"
+    "CollectBindings: unsupported constructor in `"
       <> fn
       <> "` (failed on "
       <> take 30 (show thing)
       <> "...)"
+
+-------------------------------------------------------------------------------
+
+newtype BindingVars = BindingVars (Set Name)
+  deriving (Eq, Show)
+
+instance Semigroup BindingVars where
+  BindingVars f1 <> BindingVars f2 = BindingVars (f1 <> f2)
+
+instance Monoid BindingVars where
+  mempty = BindingVars mempty
+
+instance Collection BindingVars Name where
+  member e (BindingVars bvs) = Set.member e bvs
+  insert e (BindingVars bvs) = BindingVars (Set.insert e bvs)
+
+instance IsList BindingVars where
+  type Item BindingVars = Name
+  fromList names = BindingVars (Set.fromList names)
+  toList (BindingVars bvs) = Set.toList bvs
 
 -------------------------------------------------------------------------------
 

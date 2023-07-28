@@ -1,22 +1,52 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Language.Optimal.Compile.Haskell.RenameFree where
 
+import Data.Set (Set)
+import Data.Set qualified as Set
+import GHC.Exts (IsList (..))
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax (ModName)
 import Language.Optimal.Compile.Collections
-import Language.Optimal.Compile.Haskell.CollectBindings
+import Language.Optimal.Compile.Haskell.CollectBindings (BindingVars, CollectBindings (..))
 
 unimplemented :: Show a => String -> a -> b
 unimplemented fn thing =
   error $
-    "TODO: RenameFree: finish constructors in `"
+    "RenameFree: unsupported constructor in `"
       <> fn
       <> "` (failed on "
       <> take 30 (show thing)
       <> "...)"
 
+-------------------------------------------------------------------------------
+
+newtype FreeVars = FreeVars (Set Name)
+  deriving (Eq, Show)
+
+instance Semigroup FreeVars where
+  FreeVars f1 <> FreeVars f2 = FreeVars (f1 <> f2)
+
+instance Monoid FreeVars where
+  mempty = FreeVars mempty
+
+instance Collection FreeVars Name where
+  member e (FreeVars fvs) = Set.member e fvs
+  insert e (FreeVars fvs) = FreeVars (Set.insert e fvs)
+
+instance IsList FreeVars where
+  type Item FreeVars = Name
+  fromList names = FreeVars (Set.fromList names)
+  toList (FreeVars fvs) = Set.toList fvs
+
+-------------------------------------------------------------------------------
+
 class RenameFree a where
+  -- | `renameFree bindings f a` should modify `a` by applying `f` to every
+  -- `Name` that occurs "free" in `a`, and should also include each such `Name`
+  -- in the `FreeVars` result.
   renameFree :: BindingVars -> (Name -> Name) -> a -> (a, FreeVars)
 
 instance RenameFree Exp where
