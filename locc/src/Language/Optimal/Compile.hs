@@ -16,8 +16,8 @@ import Data.Text qualified as Text
 import Language.Haskell.TH
 import Language.Haskell.TH qualified as TH
 import Language.LoCo.Toposort (topoSortPossibly)
-import Language.Optimal.Compile.FreeVars (freeVars)
-import Language.Optimal.Compile.Rename (renameExp)
+import Language.Optimal.Compile.Haskell.Free (freeVars)
+import Language.Optimal.Compile.Haskell.Rename (rename)
 import Language.Optimal.Syntax
 import Language.Optimal.Syntax qualified as Optimal
 
@@ -74,8 +74,8 @@ compileExpr modBinds expr =
         [ bindS (varP fresh) [|force $(varE original)|]
           | (original, fresh) <- Map.toList thunkVarFreshNames
         ]
-    let rename n = case thunkVarFreshNames Map.!? n of Just n' -> pure n'; Nothing -> pure n
-    expr' <- renameExp rename expr
+    let update n = case thunkVarFreshNames Map.!? n of Just n' -> n'; Nothing -> n
+    let expr' = rename update expr
     case thunkBinds of
       [] -> pure expr'
       _ -> pure (DoE Nothing (thunkBinds <> [NoBindS expr']))

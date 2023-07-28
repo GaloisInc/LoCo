@@ -23,8 +23,11 @@ library
 
     exposed-modules:
         Language.Optimal.Compile
-        Language.Optimal.Compile.FreeVars
-        Language.Optimal.Compile.Rename
+        Language.Optimal.Compile.Collections
+        Language.Optimal.Compile.Haskell.CollectBindings
+        Language.Optimal.Compile.Haskell.Free
+        Language.Optimal.Compile.Haskell.Rename
+        Language.Optimal.Compile.Haskell.RenameFree
         Language.Optimal.Parse
         Language.Optimal.Quote
         Language.Optimal.Samples
@@ -78,7 +81,8 @@ test-suite locc-test
     other-modules:
         Test.Language.LoCoEssential.Essence
         Test.Language.Optimal.Compile
-        Test.Language.Optimal.Compile.FreeVars
+        Test.Language.Optimal.Compile.Haskell.Free
+        Test.Language.Optimal.Compile.Haskell.Rename
         Test.Language.Optimal.Parse
         Test.Language.Optimal.Typecheck
         Util
