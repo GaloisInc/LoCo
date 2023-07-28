@@ -104,7 +104,7 @@ compileOptimalTypeDecl (TypeDecl {tdName = tdName, tdType = tdType}) =
     dec <-
       case tdType of
         Rec recFields -> compileOptimalRecordDecl (mkName' tdName) recFields
-        Alias ty -> compileOptimalTypeSynDecl (mkName' tdName) (mkName' ty)
+        _ -> compileOptimalTySynDecl (mkName' tdName) tdType
     pure [dec]
 
 compileOptimalRecordDecl :: Name -> Env Optimal.Type -> Q Dec
@@ -129,12 +129,22 @@ compileOptimalRecordDecl recName recFields = decl
 compileOptimalTypeSynDecl :: Name -> Name -> Q Dec
 compileOptimalTypeSynDecl tdName tdAlias = tySynD tdName [] (varT tdAlias)
 
+compileOptimalTySynDecl :: Name -> Optimal.Type -> Q Dec
+compileOptimalTySynDecl name ty = tySynD name [] (compileOptimalType ty)
+
 compileOptimalType :: Optimal.Type -> Q TH.Type
 compileOptimalType pty =
   case pty of
-    List ty -> [t|[$(compileOptimalType ty)]|]
-    Tuple tys -> foldl1 appT (tupleT (length tys) : map compileOptimalType tys)
     Alias s -> conT (mkName' s)
+    List ty ->
+      let ty' = compileOptimalType ty
+       in [t|[$ty']|]
+    Tuple tys -> foldl1 appT (tupleT (length tys) : map compileOptimalType tys)
+    Arrow t1 t2 ->
+      let t1' = compileOptimalType t1
+          t2' = compileOptimalType t2
+       in [t|$t1' -> $t2'|]
+    Rec _ -> fail "can't compile record type in non-declaration context"
 
 mkName' :: Text -> Name
 mkName' = mkName . Text.unpack
