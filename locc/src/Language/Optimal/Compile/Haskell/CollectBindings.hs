@@ -7,7 +7,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Exts (IsList (..))
 import Language.Haskell.TH
-import Language.Optimal.Compile.Collections
+import Language.Optimal.Collection
 
 unimplemented :: Show a => String -> a -> b
 unimplemented fn thing =

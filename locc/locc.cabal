@@ -22,8 +22,8 @@ library
     import: common
 
     exposed-modules:
+        Language.Optimal.Collection
         Language.Optimal.Compile
-        Language.Optimal.Compile.Collections
         Language.Optimal.Compile.Haskell.CollectBindings
         Language.Optimal.Compile.Haskell.Free
         Language.Optimal.Compile.Haskell.Rename

@@ -2,12 +2,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Language.Optimal.Compile.Collections where
-
-import Data.Set (Set)
-import Data.Set qualified as Set
-import GHC.Exts (IsList (..))
-import Language.Haskell.TH (Name)
+module Language.Optimal.Collection where
 
 class Monoid c => Collection c e | c -> e where
   member :: e -> c -> Bool

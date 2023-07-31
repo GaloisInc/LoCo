@@ -9,7 +9,7 @@ import Data.Set qualified as Set
 import GHC.Exts (IsList (..))
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax (ModName)
-import Language.Optimal.Compile.Collections
+import Language.Optimal.Collection
 import Language.Optimal.Compile.Haskell.CollectBindings (BindingVars, CollectBindings (..))
 
 unimplemented :: Show a => String -> a -> b
