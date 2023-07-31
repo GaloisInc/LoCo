@@ -220,6 +220,12 @@ renameStmtFree binds rename stmt =
       let (e', frees) = renameFree binds rename e
        in (NoBindS e', frees)
     RecS stmts ->
+      let (stmts', frees) = doStmts stmts
+       in (RecS stmts', frees)
+    ParS stmtss ->
+      let (stmtss', frees) = unzip (map doStmts stmtss)
+       in (ParS stmtss', mconcat frees)
+  where
+    doStmts stmts =
       let (stmts', frees) = unzip (map (renameFree binds rename) stmts)
-       in (RecS stmts', mconcat frees)
-    ParS stmtss -> error "TODO" -- foldMap (foldMap (stmtFreeVars bindings)) stmtss
+       in (stmts', mconcat frees)
