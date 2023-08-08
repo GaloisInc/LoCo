@@ -2,7 +2,9 @@
 
 module Language.Optimal.Compile where
 
+import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -18,14 +20,8 @@ import Language.Optimal.Syntax qualified as Optimal
 compileOptimalModuleDecl :: ModuleDecl -> Q [Dec]
 compileOptimalModuleDecl ModuleDecl {..} =
   do
-    orderedModNames <-
-      reverse
-        <$> topoSortPossibly
-          [ (mkName' var, fvs)
-            | (var, expr) <- Map.toList modEnv,
-              let fvs = Set.toList (freeVars expr `Set.intersection` modBinds)
-          ]
-    binds <- sequence [compileBind modBinds name (modNameEnv Map.! name) | name <- orderedModNames]
+    orderedModuleBinds <- sortModuleBindings modEnv'
+    binds <- compileModuleBinds modBinds orderedModuleBinds
     modOriginalResult <- result modOriginalTy
     modExpandedResult <- result modExpandedTy
     recordResult <-
@@ -43,15 +39,31 @@ compileOptimalModuleDecl ModuleDecl {..} =
   where
     funName = mkName' modName
     modNameEnv = Map.mapKeys mkName' modEnv
+    modEnv' = Map.mapKeys mkName' modEnv
     modBinds = Map.keysSet modNameEnv
     result ty =
       case ty of
         Arrow _ t2 -> result t2
         _ -> pure ty
 
-compileBind :: Set Name -> Name -> Exp -> Q Stmt
-compileBind modBindings name expr =
-  bindS (varP name) [|delayAction $(compileExpr modBindings expr)|]
+sortModuleBindings :: MonadFail m => Map Name Exp -> m [(Name, Exp)]
+sortModuleBindings modEnv =
+  do
+    let dependencies =
+          [ (var, deps)
+            | (var, expr) <- Map.toList modEnv,
+              let deps = Set.toList (thunks modNames expr)
+          ]
+    orderedNames <- reverse <$> topoSortPossibly dependencies
+    pure [(name, modEnv Map.! name) | name <- orderedNames]
+  where
+    modNames = Map.keysSet modEnv
+
+compileModuleBinds :: Set Name -> [(Name, Exp)] -> Q [Stmt]
+compileModuleBinds modBinds orderedModBinds =
+  sequence [bind name expr | (name, expr) <- orderedModBinds]
+  where
+    bind name expr = bindS (varP name) [|delayAction $(compileExpr modBinds expr)|]
 
 -- - Collect all of the free variables in this expression that are also variables
 --   in the encompassing module
@@ -61,18 +73,32 @@ compileBind modBindings name expr =
 compileExpr :: Set Name -> Exp -> Q Exp
 compileExpr modBinds expr =
   do
-    let thunkVarNames = freeVars expr `Set.intersection` modBinds
-    thunkVarFreshNames <- sequence (Map.fromSet (newName . show) thunkVarNames)
-    thunkBinds <-
-      sequence
-        [ bindS (varP fresh) [|force $(varE original)|]
-          | (original, fresh) <- Map.toList thunkVarFreshNames
-        ]
-    let update n = case thunkVarFreshNames Map.!? n of Just n' -> n'; Nothing -> n
-    let expr' = rename update expr
+    renaming <- thunkRenaming modBinds expr
+    let thunkBinds = thunkBindings renaming
+        update n = fromMaybe n (renaming Map.!? n)
+        expr' = rename update expr
     case thunkBinds of
       [] -> pure expr'
       _ -> pure (DoE Nothing (thunkBinds <> [NoBindS expr']))
+
+-- | Create statements that bind each fresh name in the map to the `force`d
+-- original
+thunkBindings :: Map Name Name -> [Stmt]
+thunkBindings renamingMap =
+  [stmt original fresh | (original, fresh) <- Map.toList renamingMap]
+  where
+    stmt original fresh =
+      BindS (VarP fresh) (AppE (VarE (mkName "force")) (VarE original))
+
+thunks :: Set Name -> Exp -> Set Name
+thunks modBinds expr = freeVars expr `Set.intersection` modBinds
+
+-- | Create a renaming strategy for the variables in an expression that refer to
+-- a binding in the surrounding module.
+thunkRenaming :: Set Name -> Exp -> Q (Map Name Name)
+thunkRenaming modBinds expr =
+  let thunkedVariables = thunks modBinds expr
+   in sequence (Map.fromList [(tv, newName (show tv)) | tv <- Set.toList thunkedVariables])
 
 compileRet :: Name -> Set Name -> Q Stmt
 compileRet modTyName modBinds = noBindS [|pure $(recConE modTyName recBinds)|]
