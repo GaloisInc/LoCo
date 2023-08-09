@@ -20,8 +20,8 @@ import Language.Optimal.Syntax qualified as Optimal
 compileOptimalModuleDecl :: ModuleDecl -> Q [Dec]
 compileOptimalModuleDecl ModuleDecl {..} =
   do
-    orderedModuleBinds <- sortModuleBindings modEnv'
-    binds <- compileModuleBinds modBinds orderedModuleBinds
+    orderedModuleBindings <- sortModuleBindings modEnv'
+    binds <- compileModuleBindings modBinds orderedModuleBindings
     modOriginalResult <- result modOriginalTy
     modExpandedResult <- result modExpandedTy
     recordResult <-
@@ -46,59 +46,116 @@ compileOptimalModuleDecl ModuleDecl {..} =
         Arrow _ t2 -> result t2
         _ -> pure ty
 
-sortModuleBindings :: MonadFail m => Map Name Exp -> m [(Name, Exp)]
+sortModuleBindings :: MonadFail m => Map Name (ModuleBinding Exp) -> m [(Name, ModuleBinding Exp)]
 sortModuleBindings modEnv =
   do
     let dependencies =
           [ (var, deps)
-            | (var, expr) <- Map.toList modEnv,
-              let deps = Set.toList (thunks modNames expr)
+            | (var, binding) <- Map.toList modEnv,
+              let deps = Set.toList (bindingThunks modNames binding)
           ]
     orderedNames <- reverse <$> topoSortPossibly dependencies
     pure [(name, modEnv Map.! name) | name <- orderedNames]
   where
     modNames = Map.keysSet modEnv
 
-compileModuleBinds :: Set Name -> [(Name, Exp)] -> Q [Stmt]
-compileModuleBinds modBinds orderedModBinds =
-  sequence [bind name expr | (name, expr) <- orderedModBinds]
+compileModuleBindings :: Set Name -> [(Name, ModuleBinding Exp)] -> Q [Stmt]
+compileModuleBindings modBinds orderedModBinds =
+  sequence [bind name binding | (name, binding) <- orderedModBinds]
   where
-    bind name expr = bindS (varP name) [|delayAction $(compileExpr modBinds expr)|]
+    bind name binding =
+      case binding of
+        ValueBinding expr -> bindS (varP name) (exprIntro modBinds expr)
+        VectorBinding len expr -> bindS (varP name) (vecIntro modBinds (mkName' len) expr)
+        IndexBinding vec expr -> bindS (varP name) (vecElim modBinds (mkName' vec) expr)
 
--- - Collect all of the free variables in this expression that are also variables
---   in the encompassing module
--- - Create a do expression that:
---   - Forces each of them
---   - Ends with the user-provided expression
-compileExpr :: Set Name -> Exp -> Q Exp
-compileExpr modBinds expr =
+-- - Expressions will be written with free variables
+-- - These variables may or may not refer to thunks
+--   - If they do, they need to be forced to make the expression well-typed
+
+-- Maybe I want a function kinda like `exprIntro'` (or maybe exactly it) that
+-- can guarantee an expression's well-typedness
+
+-- | m (Thunked m a)
+exprIntro :: Set Name -> Exp -> Q Exp
+exprIntro modBoundNames expr =
+  [|delayAction $(forcing modBoundNames expr)|]
+
+-- | Create a version of the expression evaluated in a context where all the
+-- thunks to which it refers are forced
+forcing :: Set Name -> Exp -> Q Exp
+forcing modBoundNames expr =
   do
-    renaming <- thunkRenaming modBinds expr
-    let thunkBinds = thunkBindings renaming
-        update n = fromMaybe n (renaming Map.!? n)
+    thunkRenaming <- mkThunkRenaming modBoundNames expr
+    let thunkForces = mkThunkForces thunkRenaming
+        update n = fromMaybe n (thunkRenaming Map.!? n)
         expr' = rename update expr
-    case thunkBinds of
+    case thunkForces of
       [] -> pure expr'
-      _ -> pure (DoE Nothing (thunkBinds <> [NoBindS expr']))
+      _ -> pure (DoE Nothing (thunkForces <> [NoBindS expr']))
 
--- | Create statements that bind each fresh name in the map to the `force`d
--- original
-thunkBindings :: Map Name Name -> [Stmt]
-thunkBindings renamingMap =
-  [stmt original fresh | (original, fresh) <- Map.toList renamingMap]
-  where
-    stmt original fresh =
-      BindS (VarP fresh) (AppE (VarE (mkName "force")) (VarE original))
+exprElim :: Exp -> Exp
+exprElim = undefined
 
-thunks :: Set Name -> Exp -> Set Name
-thunks modBinds expr = freeVars expr `Set.intersection` modBinds
+-- | m a
+force :: Name -> Exp
+force e = InfixE (Just (AppE (VarE (mkName "liftIO")) (AppE (VarE (mkName "putStrLn")) (LitE (StringL (show e)))))) (VarE (mkName ">>")) (Just (AppE (VarE (mkName "force")) (VarE e)))
+
+-- | m (Thunked m [Thunked m a])
+vecIntro :: Set Name -> Name -> Exp -> Q Exp
+vecIntro modBoundNames len fill =
+  do
+    let fillExpr = forcing (Set.delete len modBoundNames) fill
+    [|delayVec $(varE len) $fillExpr|]
+
+vecElim :: Set Name -> Name -> Exp -> Q Exp
+vecElim modBoundNames vec idx =
+  do
+    let idxExpr = forcing modBoundNames idx
+    [|delayIdx $(varE vec) $idxExpr|]
+
+-- This calls for a better abstraction for vectors. They probably need to
+-- package their lengths and eliminators in a nice little Haskell structure so
+-- that indexing reuses previous calculation.
+--
+-- Or do they? Does indexing ever need to reuse previous calculations? Maybe if
+-- the index is named...
+--
+-- We probably want to go back to the drawing board a little bit for how
+-- introduction and elimination work, and what's a name and what isn't.
+
+exprThunks :: Set Name -> Exp -> Set Name
+exprThunks modBinds expr = freeVars expr `Set.intersection` modBinds
+
+-- | What variables mentioned in this binding refer to thunks - i.e., to other
+-- bindings in this module?
+bindingThunks :: Set Name -> ModuleBinding Exp -> Set Name
+bindingThunks modBinds binding =
+  case binding of
+    ValueBinding expr -> freeVars expr `Set.intersection` modBinds
+    VectorBinding len expr ->
+      Set.insert (mkName' len) (freeVars expr `Set.intersection` modBinds)
+    IndexBinding vec expr ->
+      Set.insert (mkName' vec) (freeVars expr `Set.intersection` modBinds)
 
 -- | Create a renaming strategy for the variables in an expression that refer to
 -- a binding in the surrounding module.
-thunkRenaming :: Set Name -> Exp -> Q (Map Name Name)
-thunkRenaming modBinds expr =
-  let thunkedVariables = thunks modBinds expr
-   in sequence (Map.fromList [(tv, newName (show tv)) | tv <- Set.toList thunkedVariables])
+mkThunkRenaming :: Set Name -> Exp -> Q (Map Name Name)
+mkThunkRenaming modBinds expr = mkRenaming (exprThunks modBinds expr)
+
+mkRenaming :: Set Name -> Q (Map Name Name)
+mkRenaming names = sequence (Map.fromList [(n, freshen n) | n <- Set.toList names])
+
+-- | Create statements that bind each fresh name in the map to the `force`d
+-- original
+mkThunkForces :: Map Name Name -> [Stmt]
+mkThunkForces thunkFreshNames =
+  [stmt original fresh | (original, fresh) <- Map.toList thunkFreshNames]
+  where
+    stmt original fresh = BindS (VarP fresh) (force original)
+
+freshen :: Name -> Q Name
+freshen = newName . show
 
 compileRet :: Name -> Set Name -> Q Stmt
 compileRet modTyName modBinds = noBindS [|pure $(recConE modTyName recBinds)|]
@@ -121,50 +178,71 @@ compileRecConstr tyName tyEnv =
 compileOptimalTypeDecl :: TypeDecl -> Q [Dec]
 compileOptimalTypeDecl (TypeDecl {tdName = tdName, tdType = tdType}) =
   do
-    dec <-
-      case tdType of
-        Rec recFields -> compileOptimalRecordDecl (mkName' tdName) recFields
-        _ -> compileOptimalTySynDecl (mkName' tdName) tdType
-    pure [dec]
-
-compileOptimalRecordDecl :: Name -> Env Optimal.Type -> Q Dec
-compileOptimalRecordDecl recName recFields = decl
+    case tdType of
+      Rec recFields -> compileOptimalRecordDecl m (mkName' tdName) recFields
+      _ -> compileOptimalTySynDecl m (mkName' tdName) tdType
   where
-    decl = dataD context recName tyVars kind [ctor] deriv
+    m = mkName "m"
+
+compileOptimalRecordDecl :: Name -> Name -> Env Optimal.Type -> Q [Dec]
+compileOptimalRecordDecl monad recName recFields =
+  do
+    dec <- dataD context recName tyVars kind [ctor] deriv
+    pure [dec]
+  where
     ctor = recC ctorName ctorFields
     tyName = recName
     ctorName = tyName
     ctorFields = map (uncurry mkVarBangType) (Map.toList recFields)
     mkVarBangType fieldName optimalType =
       do
-        thunked <- appT (appT (conT (mkName "Thunked")) (varT m)) (compileOptimalType optimalType)
+        thunked <- compileThunkedOptimalType monad optimalType
         pure (mkName' fieldName, noBang, thunked)
     context = mempty
-    tyVars = [PlainTV m ()]
-    m = mkName "m"
+    tyVars = [PlainTV monad ()]
     kind = Nothing
     deriv = mempty
     noBang = Bang NoSourceUnpackedness NoSourceStrictness
 
-compileOptimalTypeSynDecl :: Name -> Name -> Q Dec
-compileOptimalTypeSynDecl tdName tdAlias = tySynD tdName [] (varT tdAlias)
+compileOptimalTySynDecl :: Name -> Name -> Optimal.Type -> Q [Dec]
+compileOptimalTySynDecl monad name ty =
+  do
+    dec <- tySynD name [] (compileOptimalType monad ty)
+    pure [dec]
 
-compileOptimalTySynDecl :: Name -> Optimal.Type -> Q Dec
-compileOptimalTySynDecl name ty = tySynD name [] (compileOptimalType ty)
+compileThunkedOptimalType :: Name -> Optimal.Type -> Q TH.Type
+compileThunkedOptimalType m oTy =
+  case oTy of
+    Alias s -> thunked (conT (mkName' s))
+    List ty ->
+      let ty' = goNonThunked ty
+       in thunked (appT (appT (conT (mkName "Vector")) (varT m)) ty')
+    Tuple tys -> thunked (foldl1 appT (tupleT (length tys) : map goNonThunked tys))
+    Arrow t1 t2 ->
+      let t1' = goNonThunked t1
+          t2' = goThunked t2
+       in [t|$t1' -> $t2'|]
+    Rec _ -> fail "can't compile record type in non-declaration context"
+  where
+    goThunked = compileThunkedOptimalType m
+    goNonThunked = compileOptimalType m
+    thunked = appT (appT (conT (mkName "Thunked")) (varT m))
 
-compileOptimalType :: Optimal.Type -> Q TH.Type
-compileOptimalType pty =
+compileOptimalType :: Name -> Optimal.Type -> Q TH.Type
+compileOptimalType m pty =
   case pty of
     Alias s -> conT (mkName' s)
     List ty ->
-      let ty' = compileOptimalType ty
-       in [t|[$ty']|]
-    Tuple tys -> foldl1 appT (tupleT (length tys) : map compileOptimalType tys)
+      let ty' = go ty
+       in appT (conT (mkName "Vector")) ty'
+    Tuple tys -> foldl1 appT (tupleT (length tys) : map go tys)
     Arrow t1 t2 ->
-      let t1' = compileOptimalType t1
-          t2' = compileOptimalType t2
+      let t1' = go t1
+          t2' = go t2
        in [t|$t1' -> $t2'|]
     Rec _ -> fail "can't compile record type in non-declaration context"
+  where
+    go = compileOptimalType m
 
 mkName' :: Text -> Name
 mkName' = mkName . Text.unpack

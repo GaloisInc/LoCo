@@ -116,15 +116,15 @@ in  unusedField `seq` pure (TableEntries [])
 |]
 
 
-[optimal|
-type WithLists = { xs : [Int] }
+-- [optimal|
+-- type WithLists = { xs : [Int] }
 
-withLists : WithLists
-withLists = {
-  xs = <| pure [] |>,
-  ys = <| mapM pure xs |>
-}
-|]
+-- withLists : WithLists
+-- withLists = {
+--   xs = <| pure [] |>,
+--   ys = <| mapM pure xs |>
+-- }
+-- |]
 
 
 -- table    = <| pure (Header (map (read . (:[])) (take header (drop 1 fileText)))) |>

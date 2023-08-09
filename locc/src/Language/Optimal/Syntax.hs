@@ -7,12 +7,20 @@ import Data.Text (Text)
 import Language.Haskell.TH (Exp)
 
 data ModuleDecl = ModuleDecl
-  { modOriginalTy :: Type, -- ^ the type as the user wrote it
-    modExpandedTy :: Type, -- ^ the type with all aliases expanded
+  { -- | the type as the user wrote it
+    modOriginalTy :: Type,
+    -- | the type with all aliases expanded
+    modExpandedTy :: Type,
     modName :: Symbol,
     modParams :: [Symbol],
-    modEnv :: Env Exp
+    modEnv :: Env (ModuleBinding Exp)
   }
+  deriving (Eq, Show)
+
+data ModuleBinding e
+  = ValueBinding e
+  | VectorBinding Symbol e -- vector introduction
+  | IndexBinding Symbol e -- vector elimination
   deriving (Eq, Show)
 
 data TypeDecl = TypeDecl

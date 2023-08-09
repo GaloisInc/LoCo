@@ -6,6 +6,7 @@ module Language.Optimal.Samples.Parameterized where
 import Language.Optimal.Quote (optimal)
 import Language.Optimal.Samples (facilePrimalityTest)
 import Thunk.RefVal (Thunked, delayAction, force)
+import Control.Monad.IO.Class (liftIO)
 
 [optimal|
 type Foo = { foo : Int }

@@ -59,7 +59,7 @@ parseOptimalModuleDecl =
 parseOptimalModuleTypeAscription :: Parser (Symbol, Type)
 parseOptimalModuleTypeAscription = parseBinop parseVarName (single ':') parseOptimalType
 
-parseOptimalModuleBody :: Symbol -> Parser ([Symbol], Env Exp)
+parseOptimalModuleBody :: Symbol -> Parser ([Symbol], Env (ModuleBinding Exp))
 parseOptimalModuleBody modName =
   do
     ignore (chunk modName)
@@ -68,8 +68,16 @@ parseOptimalModuleBody modName =
     body <- parseOptimalModuleBindings
     pure (params, body)
 
-parseOptimalModuleBindings :: Parser (Env Exp)
-parseOptimalModuleBindings = parseBindings (single '=') parseHSExpr
+parseOptimalModuleBindings :: Parser (Env (ModuleBinding Exp))
+parseOptimalModuleBindings = parseBindings (single '=') bindingBody
+  where
+    bindingBody =
+      choice
+        [ ValueBinding <$> parseValExpr,
+          uncurry VectorBinding <$> parseVecExpr,
+          uncurry IndexBinding <$> parseIdxExpr
+
+        ]
 
 parseOptimalTypeDecl :: Parser TypeDecl
 parseOptimalTypeDecl =
@@ -126,8 +134,8 @@ parseOptimalRecordType = parseBindings (single ':') parseOptimalType
 
 -------------------------------------------------------------------------------
 
-parseHSExpr :: Parser Exp
-parseHSExpr =
+parseValExpr :: Parser Exp
+parseValExpr =
   do
     ignore (chunk left)
     str <- manyTill anySingle (chunk right)
@@ -136,6 +144,22 @@ parseHSExpr =
       Right expr -> pure expr
   where
     (left, right) = ("<|", "|>")
+
+parseVecExpr :: Parser (Symbol, Exp)
+parseVecExpr =
+  do
+    ignore (chunk "replicate")
+    len <- parseVarName
+    expr <- parseValExpr
+    pure (len, expr)
+
+parseIdxExpr :: Parser (Symbol, Exp)
+parseIdxExpr =
+  do
+    ignore (chunk "index")
+    len <- parseVarName
+    expr <- parseValExpr
+    pure (len, expr)
 
 -------------------------------------------------------------------------------
 
