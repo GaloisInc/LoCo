@@ -153,13 +153,13 @@ parseVecExpr =
     expr <- parseValExpr
     pure (len, expr)
 
-parseIdxExpr :: Parser (Symbol, Exp)
+parseIdxExpr :: Parser (Symbol, Symbol)
 parseIdxExpr =
   do
     ignore (chunk "index")
-    len <- parseVarName
-    expr <- parseValExpr
-    pure (len, expr)
+    vec <- parseVarName
+    idx <- parseVarName
+    pure (vec, idx)
 
 -------------------------------------------------------------------------------
 

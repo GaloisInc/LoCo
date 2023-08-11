@@ -20,7 +20,7 @@ data ModuleDecl = ModuleDecl
 data ModuleBinding e
   = ValueBinding e
   | VectorBinding Symbol e -- vector introduction
-  | IndexBinding Symbol e -- vector elimination
+  | IndexBinding Symbol Symbol -- vector elimination
   deriving (Eq, Show)
 
 data TypeDecl = TypeDecl
