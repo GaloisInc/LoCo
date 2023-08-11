@@ -3,8 +3,14 @@
 module Language.Optimal.Syntax where
 
 import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Text (Text)
-import Language.Haskell.TH (Exp)
+import Language.Haskell.TH (Exp, Name)
+import Language.LoCo.Toposort (topoSortPossibly)
+import Language.Optimal.Compile.Haskell.Free (Free (..))
+import Language.Optimal.Util
 
 data ModuleDecl = ModuleDecl
   { -- | the type as the user wrote it
@@ -40,3 +46,35 @@ data Type
 type Symbol = Text
 
 type Env a = Map Symbol a
+
+--------------------------------------------------------------------------------
+
+sortModuleBindings ::
+  (Free e, MonadFail m) =>
+  Map Name (ModuleBinding e) ->
+  m [(Name, ModuleBinding e)]
+sortModuleBindings modEnv =
+  do
+    let dependencies =
+          [ (var, deps)
+            | (var, binding) <- Map.toList modEnv,
+              let deps = Set.toList (bindingThunks modNames binding)
+          ]
+    orderedNames <- reverse <$> topoSortPossibly dependencies
+    pure [(n, modEnv Map.! n) | n <- orderedNames]
+  where
+    modNames = Map.keysSet modEnv
+
+-- | What variables are free in the binding but bound in the broader module
+-- context?
+bindingThunks :: Free e => Set Name -> ModuleBinding e -> Set Name
+bindingThunks modBinds binding =
+  case binding of
+    ValueBinding e -> exprThunks modBinds e
+    VectorBinding len fill -> Set.insert (name len) (expr fill)
+    IndexBinding vec idx -> Set.fromList [name vec, name idx]
+  where
+    expr = exprThunks modBinds
+
+exprThunks :: Free e => Set Name -> e -> Set Name
+exprThunks modBinds expr = freeVars expr `Set.intersection` modBinds
