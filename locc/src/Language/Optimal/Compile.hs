@@ -189,9 +189,9 @@ compileOptimalRecordDecl monad recName recFields =
     noBang = Bang NoSourceUnpackedness NoSourceStrictness
 
 compileOptimalTySynDecl :: Name -> Name -> Optimal.Type -> Q [Dec]
-compileOptimalTySynDecl monad name ty =
+compileOptimalTySynDecl monad nm ty =
   do
-    dec <- tySynD name [] (compileOptimalType monad ty)
+    dec <- tySynD nm [] (compileOptimalType monad ty)
     pure [dec]
 
 compileThunkedOptimalType :: Name -> Optimal.Type -> Q TH.Type
