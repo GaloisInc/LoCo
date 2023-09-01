@@ -159,6 +159,18 @@ modBindingTests =
         "vector index binding"
         "{ x = index xs i }"
         [("x", IndexBinding "xs" "i")],
+      testSuccess
+        "module intro, no args"
+        "{ m = module foo }"
+        [("m", ModuleIntro "foo" mempty)],
+      testSuccess
+        "module intro, args"
+        "{ m = module foo x }"
+        [("m", ModuleIntro "foo" ["x"])],
+      testSuccess
+        "module index"
+        "{ f = m.x }"
+        [("f", ModuleIndex "m" "x")],
       testFailure "empty bindings" "{ }"
     ]
   where

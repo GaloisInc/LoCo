@@ -75,8 +75,9 @@ parseOptimalModuleBindings = parseBindings (single '=') bindingBody
       choice
         [ ValueBinding <$> parseValExpr,
           uncurry VectorBinding <$> parseVecExpr,
-          uncurry IndexBinding <$> parseIdxExpr
-
+          uncurry IndexBinding <$> parseIdxExpr,
+          uncurry ModuleIntro <$> parseModIntro,
+          uncurry ModuleIndex <$> parseModIndex
         ]
 
 parseOptimalTypeDecl :: Parser TypeDecl
@@ -134,6 +135,7 @@ parseOptimalRecordType = parseBindings (single ':') parseOptimalType
 
 -------------------------------------------------------------------------------
 
+-- | "<| e |>"
 parseValExpr :: Parser Exp
 parseValExpr =
   do
@@ -145,6 +147,7 @@ parseValExpr =
   where
     (left, right) = ("<|", "|>")
 
+-- | "replicate i <| e |>"
 parseVecExpr :: Parser (Symbol, Exp)
 parseVecExpr =
   do
@@ -153,6 +156,7 @@ parseVecExpr =
     expr <- parseValExpr
     pure (len, expr)
 
+-- | "index xs i"
 parseIdxExpr :: Parser (Symbol, Symbol)
 parseIdxExpr =
   do
@@ -160,6 +164,26 @@ parseIdxExpr =
     vec <- parseVarName
     idx <- parseVarName
     pure (vec, idx)
+
+-- | "module m [p ...]"
+parseModIntro :: Parser (Symbol, [Symbol])
+parseModIntro =
+  do
+    ignore (chunk "module")
+    md <- parseVarName
+    params <- many parseVarName
+    ws
+    pure (md, params)
+
+-- | "m.x"
+parseModIndex :: Parser (Symbol, Symbol)
+parseModIndex =
+  do
+    md <- parseVarName
+    _ <- single '.'
+    field <- parseVarName
+    ws
+    pure (md, field)
 
 -------------------------------------------------------------------------------
 

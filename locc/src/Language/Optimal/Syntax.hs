@@ -24,6 +24,12 @@ data ModuleBinding e
   = ValueBinding e
   | VectorBinding Symbol e -- vector introduction
   | IndexBinding Symbol Symbol -- vector elimination
+  | ModuleIntro
+      Symbol -- ^ module constructor fn (*not* the module type)
+      [Symbol] -- ^ arguments
+  | ModuleIndex
+      Symbol -- ^ module name
+      Symbol -- ^ field name
   deriving (Eq, Show)
 
 data TypeDecl = TypeDecl
