@@ -4,7 +4,7 @@
 
 module Test.Language.Optimal.Typecheck (tests) where
 
-import Language.Optimal.Syntax (ModuleDecl (..), Type (..), TypeDecl (TypeDecl))
+import Language.Optimal.Syntax (Type (..))
 import Language.Optimal.Typecheck
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -14,38 +14,24 @@ tests :: TestTree
 tests =
   testGroup
     $moduleName
-    [ modTyExpansionTests
+    [ tyExpansionTests
     ]
 
-modTyExpansionTests :: TestTree
-modTyExpansionTests =
+tyExpansionTests :: TestTree
+tyExpansionTests =
   testGroup
     "unaliasing types"
-    [ testSuccess "no alias" mempty fooModule fooTy,
-      testSuccess "single-level alias" fooAliasIsFoo (fooModuleWithAlias fooAlias) fooTy,
-      testSuccess "double-level alias" fooAliasIsBarAlias (fooModuleWithAlias barAlias) barTy
+    [ testSuccess "no alias" mempty (Alias fooAlias) (Alias barAlias),
+      testSuccess "single-level alias" fooAliasIsFoo (Alias fooAlias) fooTy,
+      testSuccess "double-level alias" fooAliasIsBarAlias (Alias barAlias) barTy
     ]
   where
     testSuccess name tyEnv source expected =
       let result = expandType tyEnv source
        in testCase name $ expected @=? result
-    fooModule =
-      ModuleDecl
-        { modTy = fooTy,
-          modParams = mempty,
-          modName = "foo",
-          modEnv = mempty
-        }
-    fooModuleWithAlias alias =
-      ModuleDecl
-        { modTy = Alias alias,
-          modParams = mempty,
-          modName = "foo",
-          modEnv = mempty
-        }
     fooAlias = "Foo"
     barAlias = "Foo"
-    fooTy = Rec [("x", Alias "Int")]
-    barTy = Rec [("y", Alias "Char")]
-    fooAliasIsFoo = [TypeDecl fooAlias fooTy]
-    fooAliasIsBarAlias = [TypeDecl fooAlias (Alias barAlias), TypeDecl barAlias barTy]
+    fooTy = Rec fooAlias [("x", Alias "Int")]
+    barTy = Rec barAlias [("y", Alias "Char")]
+    fooAliasIsFoo = [(fooAlias, fooTy)]
+    fooAliasIsBarAlias = [(fooAlias, Alias barAlias), (barAlias, barTy)]

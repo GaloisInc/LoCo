@@ -31,11 +31,10 @@ typeTests =
       testSuccess "list int" (List oInt) "Vector m Int",
       testSuccess "(int, bool)" (Tuple [oInt, oBool]) "(Int, Bool)",
       testSuccess "int -> bool" (Arrow oInt oBool) "Int -> Bool",
-      testFailure "record" (Rec [("x", oInt)])
+      testSuccess "record" (Rec "Foo" [("x", oInt)]) "Foo m"
     ]
   where
-    testSuccess = success (compileOptimalType "m") parseType
-    testFailure = failure (compileOptimalType "m")
+    testSuccess = success (compileOptimalType mempty "m") parseType
 
 thunkedTypeTests :: TestTree
 thunkedTypeTests =
@@ -45,11 +44,10 @@ thunkedTypeTests =
       testSuccess "list int" (List oInt) "Thunked m (Vector m Int)",
       testSuccess "(int, bool)" (Tuple [oInt, oBool]) "Thunked m (Int, Bool)",
       testSuccess "int -> bool" (Arrow oInt oBool) "Int -> Thunked m Bool",
-      testFailure "record" (Rec [("x", oInt)])
+      testSuccess "record" (Rec "Foo" [("x", oInt)]) "Thunked m (Foo m)"
     ]
   where
-    testSuccess = success (compileThunkedOptimalType (mkName "m")) parseType
-    testFailure = failure (compileThunkedOptimalType (mkName "m"))
+    testSuccess = success (compileThunkedOptimalType mempty "m") parseType
 
 typeDeclTests :: TestTree
 typeDeclTests =
@@ -61,11 +59,11 @@ typeDeclTests =
         "type Foo = Int",
       testSuccess
         "record decl"
-        (TypeDecl "Foo" (Rec [("x", oInt)]))
+        (TypeDecl "Foo" (Rec "Foo" [("x", oInt)]))
         "data Foo m = Foo {x :: Thunked m Int}"
     ]
   where
-    testSuccess = success compileOptimalTypeDecl parseDecs
+    testSuccess = success (compileOptimalTypeDecl mempty "m") parseDecs
 
 success ::
   (Eq th, Show th) =>

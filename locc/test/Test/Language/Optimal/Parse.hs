@@ -8,8 +8,7 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Language.Haskell.TH.Syntax
 import Language.Optimal.Parse
-import Language.Optimal.Syntax (ModuleBinding (..), ModuleDecl (..), Type (..))
-import Language.Optimal.Typecheck (expandType)
+import Language.Optimal.Syntax (ModuleBinding (..), Type (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 import Util (moduleName)
@@ -62,7 +61,7 @@ typeTests =
     [ testSuccess "int" "Int" int,
       testSuccess "fn2" "Int -> Int" (Arrow int int),
       testSuccess "fn3" "Int -> Int -> Int" (Arrow int (Arrow int int)),
-      testSuccess "rec" "{ foo : Int, bar : Int }" (Rec (Map.fromList [("foo", int), ("bar", int)])),
+      testSuccess "rec" "{ foo : Int, bar : Int }" (Rec tyName [("foo", int), ("bar", int)]),
       testSuccess "with underscore" "Int_2" (Alias "Int_2"),
       testSuccess "list" "[Int]" (List (Alias "Int")),
       testSuccess "list of list" "[[Int]]" (List (List (Alias "Int"))),
@@ -74,10 +73,11 @@ typeTests =
     ]
   where
     int = Alias "Int"
+    tyName = mempty
     testSuccess name source expected =
-      testCase name (testParseSuccess parseOptimalType source expected)
+      testCase name (testParseSuccess (parseOptimalType tyName) source expected)
     testFailure name source =
-      testCase name (testParseFailure parseOptimalType source)
+      testCase name (testParseFailure (parseOptimalType tyName) source)
 
 exprTests :: TestTree
 exprTests =
