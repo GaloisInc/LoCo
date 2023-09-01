@@ -93,6 +93,7 @@ test-suite locc-test
         base ^>=4.16.4.0,
         locc,
         containers ^>=0.6.4.1,
+        haskell-src-meta ^>=0.8.12,
         QuickCheck ^>=2.14.2,
         tasty ^>=1.4.3,
         tasty-hunit ^>=0.10.0.3,
