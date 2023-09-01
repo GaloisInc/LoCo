@@ -65,13 +65,14 @@ typeDeclTests =
   where
     testSuccess = success (compileOptimalTypeDecl mempty "m") parseDecs
 
+-- | Generic method for testing compilation
 success ::
   (Eq th, Show th) =>
-  (optimal -> Q th) ->
-  (String -> Either String th) ->
+  (optimal -> Q th) -> -- ^ compile something to a TH value
+  (String -> Either String th) -> -- ^ parse a TH value
   TestName ->
-  optimal ->
-  String ->
+  optimal -> -- ^ something to compile
+  String -> -- ^ what it should compile to (in regular Haskell concrete syntax)
   TestTree
 success compileOptimal parseTH testName original expected =
   testCase testName $
