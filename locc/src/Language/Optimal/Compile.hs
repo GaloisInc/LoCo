@@ -63,11 +63,11 @@ compileModuleBindings modBinds orderedModBinds =
   where
     bind nm binding =
       case binding of
-        ValueBinding expr -> bindS (varP nm) (exprIntro modBinds expr)
-        VectorBinding (name -> len) fill
+        Expression expr -> bindS (varP nm) (exprIntro modBinds expr)
+        VectorReplicate (name -> len) fill
           | len `Set.member` modBinds -> bindS (varP nm) (vecIntro modBinds len fill)
           | otherwise -> bindS (varP nm) (vecIntro' modBinds len fill)
-        IndexBinding (name -> vec) (name -> idx)
+        VectorIndex (name -> vec) (name -> idx)
           | idx `Set.member` modBinds -> bindS (varP nm) (vecIndex modBinds vec idx)
           | otherwise -> bindS (varP nm) (vecIndex' modBinds vec idx)
         ModuleIntro (name -> m) (map name -> ps) ->

@@ -73,9 +73,9 @@ parseOptimalModuleBindings = parseBindings (single '=') bindingBody
   where
     bindingBody =
       choice
-        [ ValueBinding <$> parseValExpr,
-          uncurry VectorBinding <$> parseVecExpr,
-          uncurry IndexBinding <$> parseIdxExpr,
+        [ Expression <$> parseValExpr,
+          uncurry VectorReplicate <$> parseVecExpr,
+          uncurry VectorIndex <$> parseIdxExpr,
           uncurry ModuleIntro <$> parseModIntro,
           uncurry ModuleIndex <$> parseModIndex
         ]

@@ -119,19 +119,19 @@ modBodyTests =
         "foo = { x = <| pure 3 |> }"
         "foo"
         mempty
-        [("x", ValueBinding (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+        [("x", Expression (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
         "one parameter"
         "foo y = { x = <| pure y |> }"
         "foo"
         ["y"]
-        [("x", ValueBinding (AppE (VarE (mkName "pure")) (VarE (mkName "y"))))],
+        [("x", Expression (AppE (VarE (mkName "pure")) (VarE (mkName "y"))))],
       testSuccess
         "multiple parameters"
         "foo y z = { x = <| pure y |> }"
         "foo"
         ["y", "z"]
-        [("x", ValueBinding (AppE (VarE (mkName "pure")) (VarE (mkName "y"))))]
+        [("x", Expression (AppE (VarE (mkName "pure")) (VarE (mkName "y"))))]
     ]
   where
     testSuccess name source expectedName expectedParams expectedBinds =
@@ -144,21 +144,21 @@ modBindingTests =
     [ testSuccess
         "single value binding"
         "{ x = <| pure 3 |> }"
-        [("x", ValueBinding (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+        [("x", Expression (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
         "single vector binding"
         "{ x = replicate l <| pure 3 |> }"
-        [("x", VectorBinding "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+        [("x", VectorReplicate "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
         "multiple bindings"
         "{ x = <| pure 3 |>, y = replicate x <| pure 'a' |> }"
-        [ ("x", ValueBinding (AppE (VarE (mkName "pure")) (LitE (IntegerL 3)))),
-          ("y", VectorBinding "x" (AppE (VarE (mkName "pure")) (LitE (CharL 'a'))))
+        [ ("x", Expression (AppE (VarE (mkName "pure")) (LitE (IntegerL 3)))),
+          ("y", VectorReplicate "x" (AppE (VarE (mkName "pure")) (LitE (CharL 'a'))))
         ],
       testSuccess
         "vector index binding"
         "{ x = index xs i }"
-        [("x", IndexBinding "xs" "i")],
+        [("x", VectorIndex "xs" "i")],
       testSuccess
         "module intro, no args"
         "{ m = module foo }"

@@ -21,9 +21,9 @@ data ModuleDecl = ModuleDecl
   deriving (Eq, Show)
 
 data ModuleBinding e
-  = ValueBinding e
-  | VectorBinding Symbol e -- vector introduction
-  | IndexBinding Symbol Symbol -- vector elimination
+  = Expression e
+  | VectorReplicate Symbol e -- vector introduction
+  | VectorIndex Symbol Symbol -- vector elimination
   | ModuleIntro
       Symbol -- ^ module constructor fn (*not* the module type)
       [Symbol] -- ^ arguments
@@ -73,9 +73,9 @@ sortModuleBindings modEnv =
 bindingThunks :: Free e => Set Name -> ModuleBinding e -> Set Name
 bindingThunks modBinds binding =
   case binding of
-    ValueBinding e -> expr e
-    VectorBinding len fill -> Set.insert (name len) (expr fill)
-    IndexBinding vec idx -> Set.fromList [name vec, name idx]
+    Expression e -> expr e
+    VectorReplicate len fill -> Set.insert (name len) (expr fill)
+    VectorIndex vec idx -> Set.fromList [name vec, name idx]
     ModuleIntro modName modArgs -> Set.fromList (map name modArgs) `Set.intersection` modBinds
     ModuleIndex modThunk field -> Set.singleton (name modThunk)
   where
