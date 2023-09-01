@@ -175,7 +175,8 @@ compileOptimalTypeDecl (TypeDecl {tdName = tdName, tdType = tdType}) =
   do
     case tdType of
       Rec recFields -> compileOptimalRecordDecl m (name tdName) recFields
-      _ -> compileOptimalTySynDecl m (name tdName) tdType
+      Alias alias -> compileOptimalTySynDecl (name tdName) (name alias)
+      _ -> fail "cannot declare a non-record or -alias type"
   where
     m = mkName "m"
 
@@ -199,10 +200,10 @@ compileOptimalRecordDecl monad recName recFields =
     deriv = mempty
     noBang = Bang NoSourceUnpackedness NoSourceStrictness
 
-compileOptimalTySynDecl :: Name -> Name -> Optimal.Type -> Q [Dec]
-compileOptimalTySynDecl monad nm ty =
+compileOptimalTySynDecl :: Name -> Name -> Q [Dec]
+compileOptimalTySynDecl nm ty =
   do
-    dec <- tySynD nm [] (compileOptimalType monad ty)
+    dec <- tySynD nm [] (conT ty)
     pure [dec]
 
 compileThunkedOptimalType :: Name -> Optimal.Type -> Q TH.Type
@@ -229,7 +230,7 @@ compileOptimalType m pty =
     Alias s -> conT (name s)
     List ty ->
       let ty' = go ty
-       in appT (conT (mkName "Vector")) ty'
+       in appT (appT (conT (mkName "Vector")) (varT m)) ty'
     Tuple tys -> foldl1 appT (tupleT (length tys) : map go tys)
     Arrow t1 t2 ->
       let t1' = go t1
