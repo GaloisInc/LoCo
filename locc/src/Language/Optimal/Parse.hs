@@ -54,7 +54,7 @@ parseOptimalModuleDecl =
   do
     (modName, modTy) <- parseOptimalModuleTypeAscription
     (modParams, binds) <- parseOptimalModuleBody modName
-    pure ModuleDecl {modOriginalTy = modTy, modExpandedTy = modTy, modName = modName, modParams = modParams, modEnv = binds}
+    pure ModuleDecl {modTy = modTy, modName = modName, modParams = modParams, modEnv = binds}
 
 parseOptimalModuleTypeAscription :: Parser (Symbol, Type)
 parseOptimalModuleTypeAscription = parseBinop parseVarName (single ':') parseOptimalType

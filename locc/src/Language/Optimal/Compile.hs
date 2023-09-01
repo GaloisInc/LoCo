@@ -16,18 +16,13 @@ import Language.Optimal.Syntax
 import Language.Optimal.Syntax qualified as Optimal
 import Language.Optimal.Util (Named (name))
 
-compileOptimalModuleDecl :: ModuleDecl -> Q [Dec]
-compileOptimalModuleDecl ModuleDecl {..} =
+compileOptimalModuleDecl :: ModuleDecl -> Optimal.Type -> Q [Dec]
+compileOptimalModuleDecl ModuleDecl {..} expandedTy =
   do
     orderedModuleBindings <- sortModuleBindings modEnv'
     binds <- compileModuleBindings modBinds orderedModuleBindings
-    modOriginalResult <- result modOriginalTy
-    modExpandedResult <- result modExpandedTy
-    recordResult <-
-      case (modOriginalResult, modExpandedResult) of
-        (Alias alias, Rec tyEnv) -> compileRecConstr (name alias) tyEnv
-        _ -> fail "cannot compile module with non-record result type"
-    ret <- noBindS [|pure $(pure recordResult)|]
+    (recordAlias, recordEnv) <- recordResult modTy expandedTy
+    ret <- noBindS [|pure $(compileRecConstr recordAlias recordEnv)|]
     let body = DoE Nothing (binds <> [ret])
         params = [VarP (name p) | p <- modParams]
         decl = FunD funName [Clause params (NormalB body) mempty]
@@ -40,6 +35,22 @@ compileOptimalModuleDecl ModuleDecl {..} =
     modNameEnv = Map.mapKeys name modEnv
     modEnv' = Map.mapKeys name modEnv
     modBinds = Map.keysSet modNameEnv
+
+recordResult :: MonadFail m => Optimal.Type -> Optimal.Type -> m (Name, Env Optimal.Type)
+recordResult modTy expandedTy =
+  do
+    modOriginalResult <- result modTy
+    modExpandedResult <- result expandedTy
+    case (modOriginalResult, modExpandedResult) of
+      (Alias alias, Rec tyEnv) -> pure (name alias, tyEnv)
+      _ ->
+        fail $
+          unlines
+            [ "cannot compile module with non-record result type",
+              "original: " <> show modOriginalResult,
+              "expanded: " <> show modExpandedResult
+            ]
+  where
     result ty =
       case ty of
         Arrow _ t2 -> result t2

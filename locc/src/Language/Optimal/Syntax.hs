@@ -13,10 +13,7 @@ import Language.Optimal.Compile.Haskell.Free (Free (..))
 import Language.Optimal.Util
 
 data ModuleDecl = ModuleDecl
-  { -- | the type as the user wrote it
-    modOriginalTy :: Type,
-    -- | the type with all aliases expanded
-    modExpandedTy :: Type,
+  { modTy :: Type,
     modName :: Symbol,
     modParams :: [Symbol],
     modEnv :: Env (ModuleBinding Exp)

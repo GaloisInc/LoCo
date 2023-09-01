@@ -10,7 +10,7 @@ import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Language.Optimal.Compile (compileOptimalModuleDecl, compileOptimalTypeDecl)
 import Language.Optimal.Parse (parseOptimal)
-import Language.Optimal.Typecheck (expandTypes)
+import Language.Optimal.Typecheck (expandType)
 
 optimal :: QuasiQuoter
 optimal =
@@ -25,9 +25,12 @@ decls :: String -> Q [Dec]
 decls src =
   do
     (tyDecls, modDecls) <- either fail pure (parseOptimal (Text.pack src'))
-    let typedModDecls = expandTypes tyDecls modDecls
+
     tyQDecs <- mapM compileOptimalTypeDecl tyDecls
-    modQDecs <- mapM compileOptimalModuleDecl typedModDecls
+
+    let typedModDecls = map (\m -> (m, expandType tyDecls m)) modDecls
+    modQDecs <- mapM (uncurry compileOptimalModuleDecl) typedModDecls
+
     pure $ concat (tyQDecs ++ modQDecs)
   where
     comment = "--"
