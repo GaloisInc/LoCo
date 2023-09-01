@@ -8,10 +8,10 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Language.Haskell.TH.Syntax
 import Language.Optimal.Parse
-import Language.Optimal.Syntax (ModuleDecl (..), Type (..))
-import Language.Optimal.Typecheck (expandTypes)
+import Language.Optimal.Syntax (ModuleBinding (..), ModuleDecl (..), Type (..))
+import Language.Optimal.Typecheck (expandType)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit
+import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 import Util (moduleName)
 
 tests :: TestTree
@@ -93,9 +93,9 @@ exprTests =
       testCase name $
         do
           expr' <- runQ expr
-          testParseSuccess parseHSExpr source expr'
+          testParseSuccess parseValExpr source expr'
     testFailure name source =
-      testCase name (testParseFailure parseHSExpr source)
+      testCase name (testParseFailure parseValExpr source)
 
 modTypeTests :: TestTree
 modTypeTests =
@@ -119,19 +119,19 @@ modBodyTests =
         "foo = { x = <| pure 3 |> }"
         "foo"
         mempty
-        [("x", AppE (VarE (mkName "pure")) (LitE (IntegerL 3)))],
+        [("x", ValueBinding (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
         "one parameter"
         "foo y = { x = <| pure y |> }"
         "foo"
         ["y"]
-        [("x", AppE (VarE (mkName "pure")) (VarE (mkName "y")))],
+        [("x", ValueBinding (AppE (VarE (mkName "pure")) (VarE (mkName "y"))))],
       testSuccess
         "multiple parameters"
         "foo y z = { x = <| pure y |> }"
         "foo"
         ["y", "z"]
-        [("x", AppE (VarE (mkName "pure")) (VarE (mkName "y")))]
+        [("x", ValueBinding (AppE (VarE (mkName "pure")) (VarE (mkName "y"))))]
     ]
   where
     testSuccess name source expectedName expectedParams expectedBinds =
@@ -142,15 +142,23 @@ modBindingTests =
   testGroup
     "module bindings"
     [ testSuccess
-        "single binding"
+        "single value binding"
         "{ x = <| pure 3 |> }"
-        [("x", AppE (VarE (mkName "pure")) (LitE (IntegerL 3)))],
+        [("x", ValueBinding (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+      testSuccess
+        "single vector binding"
+        "{ x = replicate l <| pure 3 |> }"
+        [("x", VectorBinding "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
         "multiple bindings"
-        "{ x = <| pure 3 |>, y = <| pure 'a' |> }"
-        [ ("x", AppE (VarE (mkName "pure")) (LitE (IntegerL 3))),
-          ("y", AppE (VarE (mkName "pure")) (LitE (CharL 'a')))
+        "{ x = <| pure 3 |>, y = replicate x <| pure 'a' |> }"
+        [ ("x", ValueBinding (AppE (VarE (mkName "pure")) (LitE (IntegerL 3)))),
+          ("y", VectorBinding "x" (AppE (VarE (mkName "pure")) (LitE (CharL 'a'))))
         ],
+      testSuccess
+        "vector index binding"
+        "{ x = index xs i }"
+        [("x", IndexBinding "xs" "i")],
       testFailure "empty bindings" "{ }"
     ]
   where

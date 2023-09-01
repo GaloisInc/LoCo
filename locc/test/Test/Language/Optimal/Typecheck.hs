@@ -27,23 +27,18 @@ modTyExpansionTests =
     ]
   where
     testSuccess name tyEnv source expected =
-      let result = expandTypes tyEnv [source]
-       in testCase name $
-            case result of
-              [ModuleDecl {..}] -> expected @=? modExpandedTy
-              _multiple -> assertFailure "this shouldn't happen"
+      let result = expandType tyEnv source
+       in testCase name $ expected @=? result
     fooModule =
       ModuleDecl
-        { modOriginalTy = fooTy,
-          modExpandedTy = fooTy,
+        { modTy = fooTy,
           modParams = mempty,
           modName = "foo",
           modEnv = mempty
         }
     fooModuleWithAlias alias =
       ModuleDecl
-        { modOriginalTy = Alias alias,
-          modExpandedTy = Alias alias,
+        { modTy = Alias alias,
           modParams = mempty,
           modName = "foo",
           modEnv = mempty
