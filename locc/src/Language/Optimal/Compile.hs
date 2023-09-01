@@ -222,9 +222,8 @@ compileOptimalRecordDecl tyEnv m recName recFields =
     ctor = recC recName (map (uncurry mkField) (Map.toList recFields))
     mkField fieldName optimalType =
       do
-        ty <- thunked (compileOptimalType tyEnv m optimalType)
+        ty <- compileThunkedOptimalType tyEnv m optimalType
         pure (name fieldName, noBang, ty)
-    thunked = appT (appT (conT "Thunked") (varT m))
     noBang = Bang NoSourceUnpackedness NoSourceStrictness
 
 compileOptimalType :: Env Optimal.Type -> Name -> Optimal.Type -> Q TH.Type
@@ -237,3 +236,8 @@ compileOptimalType tyEnv m ty =
     Rec nm fields -> appT (conT (name nm)) (varT m)
   where
     go = compileOptimalType tyEnv m
+
+compileThunkedOptimalType :: Env Optimal.Type -> Name -> Optimal.Type -> Q TH.Type
+compileThunkedOptimalType tyEnv m ty = thunked (compileOptimalType tyEnv m ty)
+  where
+    thunked = appT (appT (conT "Thunked") (varT m))
