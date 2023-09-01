@@ -21,16 +21,16 @@ tyExpansionTests :: TestTree
 tyExpansionTests =
   testGroup
     "unaliasing types"
-    [ testSuccess "no alias" mempty (Alias fooAlias) (Alias barAlias),
+    [ testSuccess "no alias" mempty (Alias fooAlias) (Alias fooAlias),
       testSuccess "single-level alias" fooAliasIsFoo (Alias fooAlias) fooTy,
-      testSuccess "double-level alias" fooAliasIsBarAlias (Alias barAlias) barTy
+      testSuccess "double-level alias" fooAliasIsBarAlias (Alias fooAlias) barTy
     ]
   where
     testSuccess name tyEnv source expected =
       let result = expandType tyEnv source
        in testCase name $ expected @=? result
     fooAlias = "Foo"
-    barAlias = "Foo"
+    barAlias = "Bar"
     fooTy = Rec fooAlias [("x", Alias "Int")]
     barTy = Rec barAlias [("y", Alias "Char")]
     fooAliasIsFoo = [(fooAlias, fooTy)]
