@@ -1,16 +1,14 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-
 module Language.Optimal.Quote where
 
 import Data.Char (isSpace)
 import Data.List (isPrefixOf)
+import Data.Map qualified as Map
 import Data.Text qualified as Text
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
-import Language.Optimal.Compile (compileOptimalModuleDecl, compileOptimalTypeDecl)
+import Language.Optimal.Compile (compileOptimalModuleDecls, compileOptimalTypeDecls)
 import Language.Optimal.Parse (parseOptimal)
-import Language.Optimal.Typecheck (expandType)
+import Language.Optimal.Syntax
 
 optimal :: QuasiQuoter
 optimal =
@@ -26,12 +24,11 @@ decls src =
   do
     (tyDecls, modDecls) <- either fail pure (parseOptimal (Text.pack src'))
 
-    tyQDecs <- mapM compileOptimalTypeDecl tyDecls
+    let tyEnv = Map.fromList [(tdName, tdType) | TypeDecl {..} <- tyDecls]
 
-    let typedModDecls = map (\m -> (m, expandType tyDecls m)) modDecls
-    modQDecs <- mapM (uncurry compileOptimalModuleDecl) typedModDecls
-
-    pure $ concat (tyQDecs ++ modQDecs)
+    tyQDecs <- compileOptimalTypeDecls tyEnv tyDecls
+    modQDecs <- compileOptimalModuleDecls tyEnv modDecls
+    pure (tyQDecs <> modQDecs)
   where
     comment = "--"
     src' = stripComments src

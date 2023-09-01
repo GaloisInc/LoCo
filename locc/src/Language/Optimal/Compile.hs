@@ -192,72 +192,48 @@ compileRecConstr tyName tyEnv =
         ]
    in pure (RecConE tyName recBinds)
 
-compileOptimalTypeDecl :: TypeDecl -> Q [Dec]
-compileOptimalTypeDecl (TypeDecl {tdName = tdName, tdType = tdType}) =
-  do
-    case tdType of
-      Rec recFields -> compileOptimalRecordDecl m (name tdName) recFields
-      Alias alias -> compileOptimalTySynDecl (name tdName) (name alias)
-      _ -> fail "cannot declare a non-record or -alias type"
-  where
-    m = mkName "m"
+--------------------------------------------------------------------------------
 
-compileOptimalRecordDecl :: Name -> Name -> Env Optimal.Type -> Q [Dec]
-compileOptimalRecordDecl monad recName recFields =
+compileOptimalTypeDecls :: Env Optimal.Type -> [TypeDecl] -> Q [Dec]
+compileOptimalTypeDecls tyEnv tyDecls =
+  concat <$> mapM (compileOptimalTypeDecl tyEnv "m") tyDecls
+
+compileOptimalTypeDecl :: Env Optimal.Type -> Name -> TypeDecl -> Q [Dec]
+compileOptimalTypeDecl tyEnv m TypeDecl {..} =
+  case ty of
+    -- If we expanded to an Alias, we know it refers to a Haskell type, and so
+    -- doesn't require a type synonym
+    Alias alias -> (: []) <$> tySynD (name tdName) [] (go ty)
+    -- Vectors require type parameters, so their declarations do too
+    List t -> (: []) <$> tySynD (name tdName) [PlainTV m ()] (go ty)
+    Tuple ts -> undefined
+    Arrow t1 t2 -> undefined
+    Rec nm fields -> compileOptimalRecordDecl tyEnv m (name nm) fields
+  where
+    ty = expandType tyEnv tdType
+    go = compileOptimalType tyEnv m
+
+compileOptimalRecordDecl :: Env Optimal.Type -> Name -> Name -> Env Optimal.Type -> Q [Dec]
+compileOptimalRecordDecl tyEnv m recName recFields =
   do
-    dec <- dataD context recName tyVars kind [ctor] deriv
+    dec <- dataD mempty recName [PlainTV m ()] Nothing [ctor] mempty
     pure [dec]
   where
-    ctor = recC ctorName ctorFields
-    tyName = recName
-    ctorName = tyName
-    ctorFields = map (uncurry mkVarBangType) (Map.toList recFields)
-    mkVarBangType fieldName optimalType =
+    ctor = recC recName (map (uncurry mkField) (Map.toList recFields))
+    mkField fieldName optimalType =
       do
-        thunked <- compileThunkedOptimalType monad optimalType
-        pure (name fieldName, noBang, thunked)
-    context = mempty
-    tyVars = [PlainTV monad ()]
-    kind = Nothing
-    deriv = mempty
+        ty <- thunked (compileOptimalType tyEnv m optimalType)
+        pure (name fieldName, noBang, ty)
+    thunked = appT (appT (conT "Thunked") (varT m))
     noBang = Bang NoSourceUnpackedness NoSourceStrictness
 
-compileOptimalTySynDecl :: Name -> Name -> Q [Dec]
-compileOptimalTySynDecl nm ty =
-  do
-    dec <- tySynD nm [] (conT ty)
-    pure [dec]
-
-compileThunkedOptimalType :: Name -> Optimal.Type -> Q TH.Type
-compileThunkedOptimalType m oTy =
-  case oTy of
-    Alias s -> thunked (conT (name s))
-    List ty ->
-      let ty' = goNonThunked ty
-       in thunked (appT (appT (conT (mkName "Vector")) (varT m)) ty')
-    Tuple tys -> thunked (foldl1 appT (tupleT (length tys) : map goNonThunked tys))
-    Arrow t1 t2 ->
-      let t1' = goNonThunked t1
-          t2' = goThunked t2
-       in [t|$t1' -> $t2'|]
-    Rec _ -> fail "can't compile record type in non-declaration context"
+compileOptimalType :: Env Optimal.Type -> Name -> Optimal.Type -> Q TH.Type
+compileOptimalType tyEnv m ty =
+  case ty of
+    Alias alias -> conT (name alias)
+    List t -> appT (appT (conT "Vector") (varT m)) (go t)
+    Tuple ts -> undefined
+    Arrow t1 t2 -> undefined
+    Rec nm fields -> appT (conT (name nm)) (varT m)
   where
-    goThunked = compileThunkedOptimalType m
-    goNonThunked = compileOptimalType m
-    thunked = appT (appT (conT (mkName "Thunked")) (varT m))
-
-compileOptimalType :: Name -> Optimal.Type -> Q TH.Type
-compileOptimalType m pty =
-  case pty of
-    Alias s -> conT (name s)
-    List ty ->
-      let ty' = go ty
-       in appT (appT (conT (mkName "Vector")) (varT m)) ty'
-    Tuple tys -> foldl1 appT (tupleT (length tys) : map go tys)
-    Arrow t1 t2 ->
-      let t1' = go t1
-          t2' = go t2
-       in [t|$t1' -> $t2'|]
-    Rec _ -> fail "can't compile record type in non-declaration context"
-  where
-    go = compileOptimalType m
+    go = compileOptimalType tyEnv m
