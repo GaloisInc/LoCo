@@ -75,7 +75,7 @@ bindingThunks modBinds binding =
   case binding of
     Expression e -> expr e
     VectorReplicate len fill -> Set.insert (name len) (expr fill)
-    VectorIndex vec idx -> Set.fromList [name vec, name idx]
+    VectorIndex vec idx -> Set.fromList [name vec, name idx] `Set.intersection` modBinds
     ModuleIntro modName modArgs -> Set.fromList (map name modArgs) `Set.intersection` modBinds
     ModuleIndex modThunk field -> Set.singleton (name modThunk)
   where
