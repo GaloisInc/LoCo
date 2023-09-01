@@ -14,14 +14,21 @@ import Language.Haskell.TH qualified as TH
 import Language.Optimal.Compile.Haskell.Rename (rename)
 import Language.Optimal.Syntax
 import Language.Optimal.Syntax qualified as Optimal
+import Language.Optimal.Typecheck (expandType)
 import Language.Optimal.Util (Named (name))
 
-compileOptimalModuleDecl :: ModuleDecl -> Optimal.Type -> Q [Dec]
-compileOptimalModuleDecl ModuleDecl {..} expandedTy =
+compileOptimalModuleDecls :: Env Optimal.Type -> [ModuleDecl] -> Q [Dec]
+compileOptimalModuleDecls tyEnv modDecls =
+  concat <$> mapM (compileOptimalModuleDecl . elaborate) modDecls
+  where
+    elaborate ModuleDecl {..} = ModuleDecl {modTy = expandType tyEnv modTy, ..}
+
+compileOptimalModuleDecl :: ModuleDecl -> Q [Dec]
+compileOptimalModuleDecl ModuleDecl {..} =
   do
     orderedModuleBindings <- sortModuleBindings modEnv'
     binds <- compileModuleBindings modBinds orderedModuleBindings
-    (recordAlias, recordEnv) <- recordResult modTy expandedTy
+    (recordAlias, recordEnv) <- recordResult modTy
     ret <- noBindS [|pure $(compileRecConstr recordAlias recordEnv)|]
     let body = DoE Nothing (binds <> [ret])
         params = [VarP (name p) | p <- modParams]
@@ -36,19 +43,17 @@ compileOptimalModuleDecl ModuleDecl {..} expandedTy =
     modEnv' = Map.mapKeys name modEnv
     modBinds = Map.keysSet modNameEnv
 
-recordResult :: MonadFail m => Optimal.Type -> Optimal.Type -> m (Name, Env Optimal.Type)
-recordResult modTy expandedTy =
+recordResult :: MonadFail m => Optimal.Type -> m (Name, Env Optimal.Type)
+recordResult modTy =
   do
-    modOriginalResult <- result modTy
-    modExpandedResult <- result expandedTy
-    case (modOriginalResult, modExpandedResult) of
-      (Alias alias, Rec tyEnv) -> pure (name alias, tyEnv)
+    modResult <- result modTy
+    case modResult of
+      (Rec nm tyEnv) -> pure (name nm, tyEnv)
       _ ->
         fail $
           unlines
             [ "cannot compile module with non-record result type",
-              "original: " <> show modOriginalResult,
-              "expanded: " <> show modExpandedResult
+              "type: " <> show modResult
             ]
   where
     result ty =

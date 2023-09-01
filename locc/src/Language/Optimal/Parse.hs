@@ -106,15 +106,15 @@ T -> <str>
 T' -> "->" Type
     | epsilon
 -}
-parseOptimalType :: Parser Type
-parseOptimalType = t >>= t'
+parseOptimalType :: Symbol -> Parser Type
+parseOptimalType name = t >>= t'
   where
     t :: Parser Type
     t =
       choice
-        [ List <$> bracketed parseOptimalType,
-          Tuple <$> parenthesized (sepBy1 parseOptimalType (ignore (single ','))),
-          Rec <$> parseOptimalRecordType,
+        [ List <$> bracketed go,
+          Tuple <$> parenthesized (sepBy1 go (ignore (single ','))),
+          Rec name <$> parseOptimalRecordType name,
           Alias <$> parseTyName
         ]
         <* ws
@@ -122,16 +122,18 @@ parseOptimalType = t >>= t'
     t' :: Type -> Parser Type
     t' ty =
       choice
-        [ ignore (chunk "->") >> Arrow ty <$> parseOptimalType,
+        [ ignore (chunk "->") >> Arrow ty <$> go,
           pure ty
         ]
         <* ws
 
+    go = parseOptimalType name
+
     bracketed = between (ignore (single '[')) (ignore (single ']'))
     parenthesized = between (ignore (single '(')) (ignore (single ')'))
 
-parseOptimalRecordType :: Parser (Env Type)
-parseOptimalRecordType = parseBindings (single ':') parseOptimalType
+parseOptimalRecordType :: Symbol -> Parser (Env Type)
+parseOptimalRecordType name = parseBindings (single ':') (parseOptimalType name)
 
 -------------------------------------------------------------------------------
 
@@ -196,23 +198,23 @@ parseBindings parseOp parseRhs =
     binds <- braced (binding `sepBy1` separator)
     pure (Map.fromList binds)
   where
-    binding = parseBinop parseVarName parseOp parseRhs
+    binding = parseBinop parseVarName parseOp (const parseRhs)
     separator = single ',' >> ws
 
-parseBinop :: Parser lhs -> Parser op -> Parser rhs -> Parser (lhs, rhs)
+parseBinop :: Parser lhs -> Parser op -> (lhs -> Parser rhs) -> Parser (lhs, rhs)
 parseBinop parseLhs parseOp parseRhs =
   do
     lhs <- parseLhs
     ws
     ignore parseOp
-    rhs <- parseRhs
+    rhs <- parseRhs lhs
     ws
     pure (lhs, rhs)
 
-parseBind :: Parser lhs -> Parser rhs -> Parser (lhs, rhs)
+parseBind :: Parser lhs -> (lhs -> Parser rhs) -> Parser (lhs, rhs)
 parseBind lhs = parseBinop lhs (single '=')
 
-parseAscription :: Parser lhs -> Parser rhs -> Parser (lhs, rhs)
+parseAscription :: Parser lhs -> (lhs -> Parser rhs) -> Parser (lhs, rhs)
 parseAscription lhs = parseBinop lhs (single ':')
 
 -------------------------------------------------------------------------------

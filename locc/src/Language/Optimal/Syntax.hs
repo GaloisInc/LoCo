@@ -43,7 +43,7 @@ data Type
   | List Type
   | Tuple [Type]
   | Arrow Type Type
-  | Rec (Env Type)
+  | Rec Symbol (Env Type)
   deriving (Eq, Show)
 
 type Symbol = Text
