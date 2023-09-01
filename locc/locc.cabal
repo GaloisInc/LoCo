@@ -35,6 +35,7 @@ library
         Language.Optimal.Samples2
         Language.Optimal.Syntax
         Language.Optimal.Typecheck
+        Language.Optimal.Util
 
         Language.LoCoEssential.Driver
         Language.LoCoEssential.Essence
@@ -53,6 +54,7 @@ library
         Thunk.IORef
         Thunk.IORefVal
         Thunk.RefVal
+        Thunk.Vector
         
     build-depends:
         base ^>=4.16.4.0,
