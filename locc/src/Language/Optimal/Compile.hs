@@ -70,6 +70,16 @@ compileModuleBindings modBinds orderedModBinds =
         IndexBinding (name -> vec) (name -> idx)
           | idx `Set.member` modBinds -> bindS (varP nm) (vecIndex modBinds vec idx)
           | otherwise -> bindS (varP nm) (vecIndex' modBinds vec idx)
+        ModuleIntro (name -> m) (map name -> ps) ->
+          let mkMod = foldl1 AppE (map VarE (m : ps))
+           in bindS (varP nm) (exprIntro modBinds mkMod)
+        ModuleIndex (name -> m) (name -> f) ->
+          let expr = forceExpr (show m <> "." <> show f) (AppE (VarE f) (VarE m))
+              -- We delete `f` from the module bindings because it should always
+              -- refer to a record accessor, even if it happens to be previously
+              -- bound in the module
+              modBinds' = Set.delete f modBinds
+           in bindS (varP nm) (exprIntro modBinds' expr)
 
 -- | Result has type `m (Thunked m a)`
 exprIntro :: Set Name -> Exp -> Q Exp
@@ -92,12 +102,19 @@ forceThunks modBinds expr =
 -- | Name refers to thunk, result has type `m a`
 --
 -- Corresponds to `liftIO (putStrLn "<name>") >> force <name>`
-forceExpr :: Name -> Exp
-forceExpr n =
+forceName :: Name -> Exp
+forceName n =
   InfixE
     (Just (AppE (VarE "liftIO") (AppE (VarE "putStrLn") (LitE (StringL (show n))))))
     (VarE ">>")
     (Just (AppE (VarE "force") (VarE n)))
+
+forceExpr :: String -> Exp -> Exp
+forceExpr s e =
+  InfixE
+    (Just (AppE (VarE "liftIO") (AppE (VarE "putStrLn") (LitE (StringL s)))))
+    (VarE ">>")
+    (Just (AppE (VarE "force") e))
 
 -- | Create fresh names for all the thunks in an expression
 --
@@ -114,7 +131,7 @@ mkForceContext :: Map Name Name -> [Stmt]
 mkForceContext thunkRenaming =
   [stmt original fresh | (original, fresh) <- Map.toList thunkRenaming]
   where
-    stmt original fresh = BindS (VarP fresh) (forceExpr original)
+    stmt original fresh = BindS (VarP fresh) (forceName original)
 
 -------------------------------------------------------------------------------
 

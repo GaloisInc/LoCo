@@ -69,13 +69,15 @@ sortModuleBindings modEnv =
     modNames = Map.keysSet modEnv
 
 -- | What variables are free in the binding but bound in the broader module
--- context?
+-- context? These variables represent (and are typed as) thunks.
 bindingThunks :: Free e => Set Name -> ModuleBinding e -> Set Name
 bindingThunks modBinds binding =
   case binding of
-    ValueBinding e -> exprThunks modBinds e
+    ValueBinding e -> expr e
     VectorBinding len fill -> Set.insert (name len) (expr fill)
     IndexBinding vec idx -> Set.fromList [name vec, name idx]
+    ModuleIntro modName modArgs -> Set.fromList (map name modArgs) `Set.intersection` modBinds
+    ModuleIndex modThunk field -> Set.singleton (name modThunk)
   where
     expr = exprThunks modBinds
 
