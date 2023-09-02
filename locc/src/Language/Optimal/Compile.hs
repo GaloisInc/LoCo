@@ -43,24 +43,6 @@ compileOptimalModuleDecl ModuleDecl {..} =
     modEnv' = Map.mapKeys name modEnv
     modBinds = Map.keysSet modNameEnv
 
-recordResult :: MonadFail m => Optimal.Type -> m (Name, Env Optimal.Type)
-recordResult modTy =
-  do
-    modResult <- result modTy
-    case modResult of
-      (Rec nm tyEnv) -> pure (name nm, tyEnv)
-      _ ->
-        fail $
-          unlines
-            [ "cannot compile module with non-record result type",
-              "type: " <> show modResult
-            ]
-  where
-    result ty =
-      case ty of
-        Arrow _ t2 -> result t2
-        _ -> pure ty
-
 compileModuleBindings :: Set Name -> [(Name, ModuleBinding Exp)] -> Q [Stmt]
 compileModuleBindings modBinds orderedModBinds =
   do
@@ -85,6 +67,35 @@ compileModuleBindings modBinds orderedModBinds =
               -- bound in the module
               modBinds' = Set.delete f modBinds
            in bindS (varP nm) (exprIntro modBinds' expr)
+
+recordResult :: MonadFail m => Optimal.Type -> m (Name, Env Optimal.Type)
+recordResult modTy =
+  do
+    modResult <- result modTy
+    case modResult of
+      (Rec nm tyEnv) -> pure (name nm, tyEnv)
+      _ ->
+        fail $
+          unlines
+            [ "cannot compile module with non-record result type",
+              "type: " <> show modResult
+            ]
+  where
+    result ty =
+      case ty of
+        Arrow _ t2 -> result t2
+        _ -> pure ty
+
+constructModule :: Env Optimal.Type -> Name -> Q Exp
+constructModule fields tyName =
+  let recBinds =
+        [ (modBindName, VarE modBindName)
+          | modBind <- Map.keys fields,
+            let modBindName = name modBind
+        ]
+   in pure (RecConE tyName recBinds)
+
+--------------------------------------------------------------------------------
 
 -- | Result has type `m (Thunked m a)`
 exprIntro :: Set Name -> Exp -> Q Exp
@@ -158,8 +169,6 @@ vecIntro' modBinds lenVal fillExpr =
     let fillExpr' = forceThunks modBinds fillExpr
     [|delayVec' $(varE lenVal) $fillExpr'|]
 
--------------------------------------------------------------------------------
-
 -- | The result has type m (Thunked m a)
 --
 -- The index refers to a thunk
@@ -173,15 +182,6 @@ vecIndex modBinds vecThunk idxThunk =
 vecIndex' :: Set Name -> Name -> Name -> Q Exp
 vecIndex' modBinds vecThunk idxVal =
   [|delayIndex' $(varE vecThunk) $(varE idxVal)|]
-
-constructModule :: Env Optimal.Type -> Name -> Q Exp
-constructModule fields tyName =
-  let recBinds =
-        [ (modBindName, VarE modBindName)
-          | modBind <- Map.keys fields,
-            let modBindName = name modBind
-        ]
-   in pure (RecConE tyName recBinds)
 
 --------------------------------------------------------------------------------
 
