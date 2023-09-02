@@ -17,5 +17,8 @@ instance Named String where
 instance Named Text where
   name = mkName . Text.unpack
 
+instance Named Name where
+  name = id
+
 instance IsString Name where
   fromString = mkName

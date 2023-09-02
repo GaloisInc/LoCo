@@ -39,9 +39,8 @@ compileOptimalModuleDecl ModuleDecl {..} =
     pure [decl]
   where
     funName = name modName
-    modNameEnv = Map.mapKeys name modEnv
     modEnv' = Map.mapKeys name modEnv
-    modBinds = Map.keysSet modNameEnv
+    modBinds = Map.keysSet modEnv'
 
 compileModuleBindings :: Set Name -> [(Name, ModuleBinding Exp)] -> Q [Stmt]
 compileModuleBindings modBinds orderedModBinds =

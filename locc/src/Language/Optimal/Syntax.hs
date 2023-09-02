@@ -53,20 +53,21 @@ type Env a = Map Symbol a
 --------------------------------------------------------------------------------
 
 sortModuleBindings ::
-  (Free e, MonadFail m) =>
-  Map Name (ModuleBinding e) ->
+  (Free e, MonadFail m, Named n) =>
+  Map n (ModuleBinding e) ->
   m [(Name, ModuleBinding e)]
 sortModuleBindings modEnv =
   do
     let dependencies =
           [ (var, deps)
-            | (var, binding) <- Map.toList modEnv,
+            | (var, binding) <- Map.toList modEnv',
               let deps = Set.toList (bindingThunks modNames binding)
           ]
     orderedNames <- reverse <$> topoSortPossibly dependencies
-    pure [(n, modEnv Map.! n) | n <- orderedNames]
+    pure [(n, modEnv' Map.! n) | n <- orderedNames]
   where
-    modNames = Map.keysSet modEnv
+    modEnv' = Map.mapKeys name modEnv
+    modNames = Map.keysSet modEnv'
 
 -- | What variables are free in the binding but bound in the broader module
 -- context? These variables represent (and are typed as) thunks.
