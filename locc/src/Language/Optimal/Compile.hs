@@ -27,10 +27,10 @@ compileOptimalModuleDecl :: ModuleDecl -> Q [Dec]
 compileOptimalModuleDecl ModuleDecl {..} =
   do
     orderedModuleBindings <- sortModuleBindings modEnv'
-    binds <- compileModuleBindings modBinds orderedModuleBindings
-    (recordAlias, recordEnv) <- recordResult modTy
-    ret <- noBindS [|pure $(compileRecConstr recordAlias recordEnv)|]
-    let body = DoE Nothing (binds <> [ret])
+    assignments <- compileModuleBindings modBinds orderedModuleBindings
+    (modTyName, modTyEnv) <- recordResult modTy
+    mkModule <- noBindS [|pure $(constructModule modTyEnv modTyName)|]
+    let body = DoE Nothing (assignments <> [mkModule])
         params = [VarP (name p) | p <- modParams]
         decl = FunD funName [Clause params (NormalB body) mempty]
     -- sigTy <- [t|forall m. MonadIO m => m $(appT (conT (name modTyName)) [t|m|])|]
@@ -174,21 +174,12 @@ vecIndex' :: Set Name -> Name -> Name -> Q Exp
 vecIndex' modBinds vecThunk idxVal =
   [|delayIndex' $(varE vecThunk) $(varE idxVal)|]
 
-compileRet :: Name -> Set Name -> Q Stmt
-compileRet modTyName modBinds = noBindS [|pure $(recConE modTyName recBinds)|]
-  where
-    recBinds :: [Q FieldExp]
-    recBinds =
-      [ pure (modVarName, VarE modVarName)
-        | modVarName <- Set.toList modBinds
-      ]
-
-compileRecConstr :: Name -> Env Optimal.Type -> Q Exp
-compileRecConstr tyName tyEnv =
+constructModule :: Env Optimal.Type -> Name -> Q Exp
+constructModule fields tyName =
   let recBinds =
-        [ (modVarName, VarE modVarName)
-          | modVar <- Map.keys tyEnv,
-            let modVarName = name modVar
+        [ (modBindName, VarE modBindName)
+          | modBind <- Map.keys fields,
+            let modBindName = name modBind
         ]
    in pure (RecConE tyName recBinds)
 
