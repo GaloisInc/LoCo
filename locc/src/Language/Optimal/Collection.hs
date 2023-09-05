@@ -19,6 +19,7 @@ class Monoid c => Collection c e | c -> e where
   default singleton :: e -> c
   singleton e = insert e mempty
 
-  {-# MINIMAL (member | notMember), insert #-}
+  delete :: e -> c -> c
 
+  {-# MINIMAL (member | notMember), insert, delete #-}
 
