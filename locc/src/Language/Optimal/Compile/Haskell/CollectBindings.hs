@@ -30,9 +30,9 @@ instance Monoid BindingVars where
   mempty = BindingVars mempty
 
 instance Collection BindingVars Name where
-  member e (BindingVars bvs) = Set.member e bvs
-  insert e (BindingVars bvs) = BindingVars (Set.insert e bvs)
-  delete e (BindingVars bvs) = BindingVars (Set.delete e bvs)
+  member e (BindingVars bvs) = member e bvs
+  insert e (BindingVars bvs) = BindingVars (insert e bvs)
+  delete e (BindingVars bvs) = BindingVars (delete e bvs)
 
 instance IsList BindingVars where
   type Item BindingVars = Name
