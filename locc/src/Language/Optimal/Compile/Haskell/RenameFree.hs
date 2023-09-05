@@ -35,6 +35,7 @@ instance Monoid FreeVars where
 instance Collection FreeVars Name where
   member e (FreeVars fvs) = Set.member e fvs
   insert e (FreeVars fvs) = FreeVars (Set.insert e fvs)
+  delete e (FreeVars fvs) = FreeVars (Set.delete e fvs)
 
 instance IsList FreeVars where
   type Item FreeVars = Name
