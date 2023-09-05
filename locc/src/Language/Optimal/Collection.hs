@@ -1,8 +1,12 @@
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Language.Optimal.Collection where
+
+import Data.Set (Set)
+import Data.Set qualified as Set
 
 class Monoid c => Collection c e | c -> e where
   member :: e -> c -> Bool
@@ -23,3 +27,8 @@ class Monoid c => Collection c e | c -> e where
 
   {-# MINIMAL (member | notMember), insert, delete #-}
 
+instance Ord e => Collection (Set e) e where
+  member = Set.member
+  insert = Set.insert
+  singleton = Set.singleton
+  delete = Set.delete

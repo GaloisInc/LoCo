@@ -11,6 +11,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Language.Haskell.TH
 import Language.Haskell.TH qualified as TH
+import Language.Optimal.Collection
 import Language.Optimal.Compile.Haskell.Rename (rename)
 import Language.Optimal.Syntax
 import Language.Optimal.Syntax qualified as Optimal
@@ -51,10 +52,10 @@ compileModuleBindings modBinds orderedModBinds =
       case binding of
         Expression expr -> bindS (varP nm) (exprIntro modBinds expr)
         VectorReplicate (name -> len) fill
-          | len `Set.member` modBinds -> bindS (varP nm) (vecIntro modBinds len fill)
+          | len `member` modBinds -> bindS (varP nm) (vecIntro modBinds len fill)
           | otherwise -> bindS (varP nm) (vecIntro' modBinds len fill)
         VectorIndex (name -> vec) (name -> idx)
-          | idx `Set.member` modBinds -> bindS (varP nm) (vecIndex modBinds vec idx)
+          | idx `member` modBinds -> bindS (varP nm) (vecIndex modBinds vec idx)
           | otherwise -> bindS (varP nm) (vecIndex' modBinds vec idx)
         ModuleIntro (name -> m) (map name -> ps) ->
           let mkMod = foldl1 AppE (map VarE (m : ps))
@@ -64,7 +65,7 @@ compileModuleBindings modBinds orderedModBinds =
               -- We delete `f` from the module bindings because it should always
               -- refer to a record accessor, even if it happens to be previously
               -- bound in the module
-              modBinds' = Set.delete f modBinds
+              modBinds' = delete f modBinds
            in bindS (varP nm) (exprIntro modBinds' expr)
 
 recordResult :: MonadFail m => Optimal.Type -> m (Name, Env Optimal.Type)
