@@ -67,4 +67,4 @@ join (Thunk ref) =
     tVal <- liftIO (readIORef ref)
     case tVal of
       Value imm -> pure imm
-      Delay action -> delayAction (action >>= force)
+      Delay action -> action
