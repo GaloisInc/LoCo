@@ -61,7 +61,7 @@ compileModuleBindings modBinds orderedModBinds =
           let mkMod = foldl1 AppE (map VarE (m : ps))
            in bindS (varP nm) (exprIntro modBinds mkMod)
         ModuleIndex (name -> m) (name -> f) ->
-          let expr = forceExpr (show m <> "." <> show f) (AppE (VarE f) (VarE m))
+          let expr = forceExpr (AppE (VarE f) (VarE m))
               -- We delete `f` from the module bindings because it should always
               -- refer to a record accessor, even if it happens to be previously
               -- bound in the module
@@ -119,14 +119,21 @@ forceThunks modBinds expr =
 --
 -- Corresponds to `liftIO (putStrLn "<name>") >> force <name>`
 forceName :: Name -> Exp
-forceName n =
+forceName n = forceExpr (VarE n)
+
+forcePrintName :: Name -> Exp
+forcePrintName n =
   InfixE
     (Just (AppE (VarE "liftIO") (AppE (VarE "putStrLn") (LitE (StringL (show n))))))
     (VarE ">>")
     (Just (AppE (VarE "force") (VarE n)))
 
-forceExpr :: String -> Exp -> Exp
-forceExpr s e =
+forceExpr :: Exp -> Exp
+forceExpr =
+  AppE (VarE "force")
+
+forcePrintExpr :: String -> Exp -> Exp
+forcePrintExpr s e =
   InfixE
     (Just (AppE (VarE "liftIO") (AppE (VarE "putStrLn") (LitE (StringL s)))))
     (VarE ">>")
