@@ -57,6 +57,8 @@ compileModuleBindings modBinds orderedModBinds =
         VectorIndex (name -> vec) (name -> idx)
           | idx `member` modBinds -> bindS (varP nm) (vecIndex modBinds vec idx)
           | otherwise -> bindS (varP nm) (vecIndex' modBinds vec idx)
+        VectorMap (name -> vec) fn
+          | otherwise -> bindS (varP nm) (vecMap modBinds vec fn)
         ModuleIntro (name -> m) (map name -> ps) ->
           let mkMod = foldl1 AppE (map VarE (m : ps))
            in bindS (varP nm) (exprIntro modBinds mkMod)
@@ -189,6 +191,12 @@ vecIndex modBinds vecThunk idxThunk =
 vecIndex' :: Set Name -> Name -> Name -> Q Exp
 vecIndex' modBinds vecThunk idxVal =
   [|delayIndex' $(varE vecThunk) $(varE idxVal)|]
+
+vecMap :: Set Name -> Name -> Exp -> Q Exp
+vecMap modBinds vecThunk f =
+  do
+    let f' = forceThunks modBinds f
+    [|delayMap $f' $(varE vecThunk)|]
 
 --------------------------------------------------------------------------------
 

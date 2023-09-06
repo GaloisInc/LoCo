@@ -81,3 +81,12 @@ delayIndex' vecThunk idx =
       Vector {..} <- force vecThunk
       liftIO (print idx)
       force (vecContent V.! idx)
+
+--------------------------------------------------------------------------------
+
+delayMap :: MonadIO m => (a -> m b) -> Thunked m (Vector m a) -> m (Thunked m (Vector m b))
+delayMap f vecThunk =
+  delayAction $
+    do
+      Vector {..} <- force vecThunk
+      Vector <$> V.mapM (tmapM f) vecContent

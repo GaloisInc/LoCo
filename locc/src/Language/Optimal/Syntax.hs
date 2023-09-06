@@ -23,6 +23,7 @@ data ModuleDecl = ModuleDecl
 data ModuleBinding e
   = Expression e
   | VectorReplicate Symbol e -- vector introduction
+  | VectorMap Symbol e -- vector transformation
   | VectorIndex Symbol Symbol -- vector elimination
   | ModuleIntro
       Symbol -- ^ module constructor fn (*not* the module type)
@@ -76,6 +77,7 @@ bindingThunks modBinds binding =
   case binding of
     Expression e -> expr e
     VectorReplicate len fill -> Set.insert (name len) (expr fill)
+    VectorMap vec transform -> Set.insert (name vec) (expr transform)
     VectorIndex vec idx -> Set.fromList [name vec, name idx] `Set.intersection` modBinds
     ModuleIntro modName modArgs -> Set.fromList (map name modArgs) `Set.intersection` modBinds
     ModuleIndex modThunk field -> Set.singleton (name modThunk)

@@ -41,6 +41,17 @@ tmap f (Thunk ref) =
           Delay action -> Delay (f <$> action)
     pure (Thunk ref')
 
+tmapM :: MonadIO m => (a -> m b) -> Thunked m a -> m (Thunked m b)
+tmapM f (Thunk ref) =
+  do
+    tVal <- liftIO (readIORef ref)
+    ref' <- liftIO $
+      newIORef $
+        case tVal of
+          Value imm -> Delay (f imm)
+          Delay action -> Delay (f =<< action)
+    pure (Thunk ref')
+
 -- More efficient than `tmap`
 modify :: MonadIO m => (a -> a) -> Thunked m a -> m ()
 modify f (Thunk ref) = liftIO (modifyIORef' ref f')

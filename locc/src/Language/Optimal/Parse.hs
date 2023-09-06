@@ -75,6 +75,7 @@ parseOptimalModuleBindings = parseBindings (single '=') bindingBody
       choice
         [ Expression <$> parseValExpr,
           uncurry VectorReplicate <$> parseVecExpr,
+          uncurry VectorMap <$> parseMapExpr,
           uncurry VectorIndex <$> parseIdxExpr,
           uncurry ModuleIntro <$> parseModIntro,
           uncurry ModuleIndex <$> parseModIndex
@@ -166,6 +167,15 @@ parseIdxExpr =
     vec <- parseVarName
     idx <- parseVarName
     pure (vec, idx)
+
+-- | "map xs <| e |>"
+parseMapExpr :: Parser (Symbol, Exp)
+parseMapExpr =
+  do
+    ignore (chunk "map")
+    vec <- parseVarName
+    expr <- parseValExpr
+    pure (vec, expr)
 
 -- | "module m [p ...]"
 parseModIntro :: Parser (Symbol, [Symbol])
