@@ -12,6 +12,7 @@ import Data.Set qualified as Set
 import Language.Haskell.TH
 import Language.Haskell.TH qualified as TH
 import Language.Optimal.Collection
+import Language.Optimal.Compile.Haskell.Free (freeVars)
 import Language.Optimal.Compile.Haskell.Rename (rename)
 import Language.Optimal.Syntax
 import Language.Optimal.Syntax qualified as Optimal
@@ -146,8 +147,8 @@ forcePrintExpr s e =
 -- NOTE: could be a Bimap, if need be
 mkRenaming :: Set Name -> Exp -> Q (Map Name Name)
 mkRenaming modBinds expr =
-  sequence
-    (Map.fromList [(n, freshen n) | n <- Set.toList (exprThunks modBinds expr)])
+  let thunkVars = freeVars expr `Set.intersection` modBinds
+   in sequence (Map.fromSet freshen thunkVars)
 
 freshen :: Name -> Q Name
 freshen = newName . show
