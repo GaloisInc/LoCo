@@ -31,7 +31,9 @@ library
         Language.Optimal.Parse
         Language.Optimal.Quote
         Language.Optimal.Samples
+        Language.Optimal.Samples.Nested
         Language.Optimal.Samples.Parameterized
+        Language.Optimal.Samples.Vector
         Language.Optimal.Samples2
         Language.Optimal.Syntax
         Language.Optimal.Typecheck
