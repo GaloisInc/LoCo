@@ -71,6 +71,9 @@ instance RenameFree Guard where
 instance RenameFree (Guard, Exp) where
   renameFree = renameGuardedExpFree
 
+instance RenameFree Name where
+  renameFree = renameNameFree
+
 -------------------------------------------------------------------------------
 
 renameFreeExp :: BindingVars -> (Name -> Name) -> Exp -> (Exp, FreeVars)
@@ -230,3 +233,8 @@ renameStmtFree binds rename stmt =
     doStmts stmts =
       let (stmts', frees) = unzip (map (renameFree binds rename) stmts)
        in (stmts', mconcat frees)
+
+renameNameFree :: BindingVars -> (Name -> Name) -> Name -> (Name, FreeVars)
+renameNameFree binds rename nm =
+  let nameIsBound = nm `member` binds
+   in if nameIsBound then (rename nm, mempty) else (nm, singleton nm)

@@ -79,14 +79,11 @@ sortModuleBindings modEnv =
 bindingThunks :: Free e => Set Name -> ModuleBinding e -> Set Name
 bindingThunks modBinds binding =
   case binding of
-    Expression e -> expr e
-    VectorReplicate len fill -> Set.insert (name len) (expr fill)
-    VectorMap vec transform -> Set.insert (name vec) (expr transform)
-    VectorIndex vec idx -> Set.fromList [name vec, name idx] `Set.intersection` modBinds
-    ModuleIntro modName modArgs -> Set.fromList (map name modArgs) `Set.intersection` modBinds
-    ModuleIndex modThunk field -> Set.singleton (name modThunk)
+    Expression e -> go e
+    VectorReplicate len fill -> go (name len) <> go fill
+    VectorMap vec transform -> go (name vec) <> go transform
+    VectorIndex vec idx -> go (name vec) <> go (name idx)
+    ModuleIntro modName modArgs -> foldMap (go . name) modArgs
+    ModuleIndex modThunk field -> go (name modThunk)
   where
-    expr = exprThunks modBinds
-
-exprThunks :: Free e => Set Name -> e -> Set Name
-exprThunks modBinds expr = freeVars expr `Set.intersection` modBinds
+    go x = freeVars x `Set.intersection` modBinds

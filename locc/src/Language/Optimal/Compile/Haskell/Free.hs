@@ -14,3 +14,5 @@ class Free a where
      in frees
 
 instance Free Exp
+
+instance Free Name
