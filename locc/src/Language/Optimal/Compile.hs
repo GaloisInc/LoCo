@@ -168,7 +168,7 @@ vecIntro :: Set Name -> Name -> Exp -> Q Exp
 vecIntro modBinds lenThunk fillExpr =
   do
     let fillExpr' = forceThunks modBinds fillExpr
-    [|delayVec $(varE lenThunk) $fillExpr'|]
+    [|vReplicateThunk $(varE lenThunk) $fillExpr'|]
 
 -- | The result has type m (Thunked m (Vector m a))
 --
@@ -177,21 +177,21 @@ vecIntro' :: Set Name -> Name -> Exp -> Q Exp
 vecIntro' modBinds lenVal fillExpr =
   do
     let fillExpr' = forceThunks modBinds fillExpr
-    [|delayVec' $(varE lenVal) $fillExpr'|]
+    [|vReplicateVal $(varE lenVal) $fillExpr'|]
 
 -- | The result has type m (Thunked m a)
 --
 -- The index refers to a thunk
 vecIndex :: Set Name -> Name -> Name -> Q Exp
 vecIndex modBinds vecThunk idxThunk =
-  [|delayIndex $(varE vecThunk) $(varE idxThunk)|]
+  [|vIndexThunk $(varE vecThunk) $(varE idxThunk)|]
 
 -- | The result has type m (Thunked m a)
 --
 -- The index refers to a pure value
 vecIndex' :: Set Name -> Name -> Name -> Q Exp
 vecIndex' modBinds vecThunk idxVal =
-  [|delayIndex' $(varE vecThunk) $(varE idxVal)|]
+  [|vIndexVal $(varE vecThunk) $(varE idxVal)|]
 
 vecMap :: Set Name -> Name -> Exp -> Q Exp
 vecMap modBinds vecThunk f =

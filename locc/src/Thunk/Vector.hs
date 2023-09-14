@@ -38,16 +38,16 @@ instance Show (Vector m a) where
 -- - Index: Thunked a (a module-bound name)
 -- - Index:         a (a free or parameter-bound name)
 
-delayVec :: MonadIO m => Thunked m Int -> m a -> m (Thunked m (Vector m a))
-delayVec lenThunk fillAction =
+vReplicateThunk :: MonadIO m => Thunked m Int -> m a -> m (Thunked m (Vector m a))
+vReplicateThunk lenThunk fillAction =
   delayAction $
     do
       vecLen <- force lenThunk
       vecContent <- V.replicateM vecLen (delayAction fillAction)
       pure Vector {..}
 
-delayVec' :: MonadIO m => Int -> m a -> m (Thunked m (Vector m a))
-delayVec' vecLen fillAction = vec >>= delayValue
+vReplicateVal :: MonadIO m => Int -> m a -> m (Thunked m (Vector m a))
+vReplicateVal vecLen fillAction = vec >>= delayValue
   where
     vec =
       do
@@ -57,16 +57,16 @@ delayVec' vecLen fillAction = vec >>= delayValue
 -------------------------------------------------------------------------------
 
 class Index m idx where
-  index :: MonadIO m => Thunked m (Vector m a) -> idx -> m (Thunked m a)
+  vIndex :: MonadIO m => Thunked m (Vector m a) -> idx -> m (Thunked m a)
 
 instance Index m Int where
-  index = delayIndex'
+  vIndex = vIndexVal
 
 instance Index m (Thunked m Int) where
-  index = delayIndex
+  vIndex = vIndexThunk
 
-delayIndex :: MonadIO m => Thunked m (Vector m a) -> Thunked m Int -> m (Thunked m a)
-delayIndex vecThunk idxThunk =
+vIndexThunk :: MonadIO m => Thunked m (Vector m a) -> Thunked m Int -> m (Thunked m a)
+vIndexThunk vecThunk idxThunk =
   delayAction $
     do
       Vector {..} <- force vecThunk
@@ -74,8 +74,8 @@ delayIndex vecThunk idxThunk =
       liftIO (print idx)
       force (vecContent V.! idx)
 
-delayIndex' :: MonadIO m => Thunked m (Vector m a) -> Int -> m (Thunked m a)
-delayIndex' vecThunk idx =
+vIndexVal :: MonadIO m => Thunked m (Vector m a) -> Int -> m (Thunked m a)
+vIndexVal vecThunk idx =
   delayAction $
     do
       Vector {..} <- force vecThunk
