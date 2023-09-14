@@ -26,11 +26,15 @@ data ModuleBinding e
   | VectorMap Symbol e -- vector transformation
   | VectorIndex Symbol Symbol -- vector elimination
   | ModuleIntro
-      Symbol -- ^ module constructor fn (*not* the module type)
-      [Symbol] -- ^ arguments
+      Symbol
+      -- ^ module constructor fn (*not* the module type)
+      [Symbol]
+      -- ^ arguments
   | ModuleIndex
-      Symbol -- ^ module name
-      Symbol -- ^ field name
+      Symbol
+      -- ^ module name
+      Symbol
+      -- ^ field name
   deriving (Eq, Show)
 
 data TypeDecl = TypeDecl
