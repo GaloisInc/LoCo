@@ -56,15 +56,6 @@ vReplicateVal vecLen fillAction = vec >>= delayValue
 
 -------------------------------------------------------------------------------
 
-class Index m idx where
-  vIndex :: MonadIO m => Thunked m (Vector m a) -> idx -> m (Thunked m a)
-
-instance Index m Int where
-  vIndex = vIndexVal
-
-instance Index m (Thunked m Int) where
-  vIndex = vIndexThunk
-
 vIndexThunk :: MonadIO m => Thunked m (Vector m a) -> Thunked m Int -> m (Thunked m a)
 vIndexThunk vecThunk idxThunk =
   delayAction $
