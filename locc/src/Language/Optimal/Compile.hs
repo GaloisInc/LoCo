@@ -52,12 +52,8 @@ compileModuleBindings modBinds orderedModBinds =
     bind nm binding =
       case binding of
         Expression expr -> bindS (varP nm) (exprIntro modBinds expr)
-        VectorReplicate (name -> len) fill
-          | len `member` modBinds -> bindS (varP nm) (vecIntro modBinds len fill)
-          | otherwise -> bindS (varP nm) (vecIntro' modBinds len fill)
-        VectorIndex (name -> vec) (name -> idx)
-          | idx `member` modBinds -> bindS (varP nm) (vecIndex modBinds vec idx)
-          | otherwise -> bindS (varP nm) (vecIndex' modBinds vec idx)
+        VectorReplicate (name -> len) fill -> bindS (varP nm) (vecIntro modBinds len fill)
+        VectorIndex (name -> vec) (name -> idx) -> bindS (varP nm) (vecIndex modBinds vec idx)
         VectorMap (name -> vec) fn
           | otherwise -> bindS (varP nm) (vecMap modBinds vec fn)
         ModuleIntro (name -> m) (map name -> ps) ->
@@ -162,36 +158,19 @@ mkForceContext thunkRenaming =
 -------------------------------------------------------------------------------
 
 -- | The result has type m (Thunked m (Vector m a))
---
--- The length refers to a thunk
 vecIntro :: Set Name -> Name -> Exp -> Q Exp
-vecIntro modBinds lenThunk fillExpr =
-  do
-    let fillExpr' = forceThunks modBinds fillExpr
-    [|vReplicateThunk $(varE lenThunk) $fillExpr'|]
-
--- | The result has type m (Thunked m (Vector m a))
---
--- The length refers to a pure value
-vecIntro' :: Set Name -> Name -> Exp -> Q Exp
-vecIntro' modBinds lenVal fillExpr =
-  do
-    let fillExpr' = forceThunks modBinds fillExpr
-    [|vReplicateVal $(varE lenVal) $fillExpr'|]
+vecIntro modBinds len fill =
+  let fillExpr = forceThunks modBinds fill
+   in if len `member` modBinds
+        then [|vReplicateThunk $(varE len) $fillExpr|]
+        else [|vReplicateVal $(varE len) $fillExpr|]
 
 -- | The result has type m (Thunked m a)
---
--- The index refers to a thunk
 vecIndex :: Set Name -> Name -> Name -> Q Exp
-vecIndex modBinds vecThunk idxThunk =
-  [|vIndexThunk $(varE vecThunk) $(varE idxThunk)|]
-
--- | The result has type m (Thunked m a)
---
--- The index refers to a pure value
-vecIndex' :: Set Name -> Name -> Name -> Q Exp
-vecIndex' modBinds vecThunk idxVal =
-  [|vIndexVal $(varE vecThunk) $(varE idxVal)|]
+vecIndex modBinds vec idx =
+  if idx `member` modBinds
+    then [|vIndexThunk $(varE vec) $(varE idx)|]
+    else [|vIndexVal $(varE vec) $(varE idx)|]
 
 vecMap :: Set Name -> Name -> Exp -> Q Exp
 vecMap modBinds vecThunk f =
