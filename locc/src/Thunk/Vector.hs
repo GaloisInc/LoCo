@@ -75,8 +75,8 @@ vIndexVal vecThunk idx =
 
 --------------------------------------------------------------------------------
 
-delayMap :: MonadIO m => (a -> m b) -> Thunked m (Vector m a) -> m (Thunked m (Vector m b))
-delayMap f vecThunk =
+vMap :: MonadIO m => (a -> m b) -> Thunked m (Vector m a) -> m (Thunked m (Vector m b))
+vMap f vecThunk =
   delayAction $
     do
       Vector {..} <- force vecThunk

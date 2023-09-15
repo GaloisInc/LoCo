@@ -176,7 +176,7 @@ vecMap :: Set Name -> Name -> Exp -> Q Exp
 vecMap modBinds vecThunk f =
   do
     let f' = forceThunks modBinds f
-    [|delayMap $f' $(varE vecThunk)|]
+    [|vMap $f' $(varE vecThunk)|]
 
 --------------------------------------------------------------------------------
 
