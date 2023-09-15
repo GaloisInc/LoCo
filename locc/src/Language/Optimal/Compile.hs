@@ -45,16 +45,16 @@ compileOptimalModuleDecl ModuleDecl {..} =
 
 compileModuleBindings :: Set Name -> [(Name, ModuleBinding Exp)] -> Q [Stmt]
 compileModuleBindings modBinds orderedModBinds =
-  sequence [bind nm binding | (nm, binding) <- orderedModBinds]
+  sequence [bindS (varP nm) (compileBinding binding) | (nm, binding) <- orderedModBinds]
   where
-    bind nm binding =
+    compileBinding binding =
       case binding of
-        Expression expr -> bindS (varP nm) (exprIntro modBinds expr)
-        VectorReplicate len fill -> bindS (varP nm) (vecIntro modBinds len fill)
-        VectorIndex vec idx -> bindS (varP nm) (vecIndex modBinds vec idx)
-        VectorMap vec fn -> bindS (varP nm) (vecMap modBinds vec fn)
-        ModuleIntro m params -> bindS (varP nm) (modIntro modBinds m params)
-        ModuleIndex m field -> bindS (varP nm) (modIndex modBinds m field)
+        Expression expr -> exprIntro modBinds expr
+        VectorReplicate len fill -> vecIntro modBinds len fill
+        VectorIndex vec idx -> vecIndex modBinds vec idx
+        VectorMap vec fn -> vecMap modBinds vec fn
+        ModuleIntro m params -> modIntro modBinds m params
+        ModuleIndex m field -> modIndex modBinds m field
 
 recordResult :: MonadFail m => Optimal.Type -> m (Name, Env Optimal.Type)
 recordResult modTy =
