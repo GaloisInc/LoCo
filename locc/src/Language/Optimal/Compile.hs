@@ -53,16 +53,8 @@ compileModuleBindings modBinds orderedModBinds =
         VectorReplicate len fill -> bindS (varP nm) (vecIntro modBinds len fill)
         VectorIndex vec idx -> bindS (varP nm) (vecIndex modBinds vec idx)
         VectorMap vec fn -> bindS (varP nm) (vecMap modBinds vec fn)
-        ModuleIntro m ps ->
-          let mkMod = foldl1 AppE (map (VarE . name) (m : ps))
-           in bindS (varP nm) (exprIntro modBinds mkMod)
-        ModuleIndex m f ->
-          let expr = forceExpr (AppE (VarE (name f)) (VarE (name m)))
-              -- We delete `f` from the module bindings because it should always
-              -- refer to a record accessor, even if it happens to be previously
-              -- bound in the module
-              modBinds' = delete (name f) modBinds
-           in bindS (varP nm) (exprIntro modBinds' expr)
+        ModuleIntro m params -> bindS (varP nm) (modIntro modBinds m params)
+        ModuleIndex m field -> bindS (varP nm) (modIndex modBinds m field)
 
 recordResult :: MonadFail m => Optimal.Type -> m (Name, Env Optimal.Type)
 recordResult modTy =
@@ -177,6 +169,22 @@ vecMap modBinds vec f =
   do
     let f' = forceThunks modBinds f
     [|vMap $f' $(varE (name vec))|]
+
+--------------------------------------------------------------------------------
+
+modIntro :: Set Name -> Symbol -> [Symbol] -> Q Exp
+modIntro modBinds m ps =
+  let modExpr = foldl1 AppE (map (VarE . name) (m : ps))
+   in exprIntro modBinds modExpr
+
+modIndex :: Set Name -> Symbol -> Symbol -> Q Exp
+modIndex modBinds m field =
+  let indexExpr = forceExpr (AppE (VarE (name field)) (VarE (name m)))
+      -- We delete `f` from the module bindings because it should always
+      -- refer to a record accessor, even if it happens to be previously
+      -- bound in the module
+      modBinds' = delete (name field) modBinds
+   in exprIntro modBinds' indexExpr
 
 --------------------------------------------------------------------------------
 
