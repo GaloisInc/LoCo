@@ -237,7 +237,7 @@ parseVarName =
     ws
     pure (Text.pack (c : cs))
   where
-    validIdentifierChar c = isAlphaNum c || c == '_'
+    validIdentifierChar c = isAlphaNum c || c == '_' || c == '\''
 
 parseTyName :: MonadParsec error Text m => m Symbol
 parseTyName =
