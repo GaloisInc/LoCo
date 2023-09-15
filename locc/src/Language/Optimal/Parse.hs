@@ -74,9 +74,9 @@ parseOptimalModuleBindings = parseBindings (single '=') bindingBody
     bindingBody =
       choice
         [ Expression <$> parseValExpr,
-          uncurry VectorReplicate <$> parseVecExpr,
-          uncurry VectorMap <$> parseMapExpr,
-          uncurry VectorIndex <$> parseIdxExpr,
+          uncurry VectorReplicate <$> parseVecReplicate,
+          uncurry VectorMap <$> parseVecMap,
+          uncurry VectorIndex <$> parseVecIndex,
           uncurry ModuleIntro <$> parseModIntro,
           uncurry ModuleIndex <$> parseModIndex
         ]
@@ -151,8 +151,8 @@ parseValExpr =
     (left, right) = ("<|", "|>")
 
 -- | "replicate i <| e |>"
-parseVecExpr :: Parser (Symbol, Exp)
-parseVecExpr =
+parseVecReplicate :: Parser (Symbol, Exp)
+parseVecReplicate =
   do
     ignore (chunk "replicate")
     len <- parseVarName
@@ -160,8 +160,8 @@ parseVecExpr =
     pure (len, expr)
 
 -- | "index xs i"
-parseIdxExpr :: Parser (Symbol, Symbol)
-parseIdxExpr =
+parseVecIndex :: Parser (Symbol, Symbol)
+parseVecIndex =
   do
     ignore (chunk "index")
     vec <- parseVarName
@@ -169,8 +169,8 @@ parseIdxExpr =
     pure (vec, idx)
 
 -- | "map xs <| e |>"
-parseMapExpr :: Parser (Symbol, Exp)
-parseMapExpr =
+parseVecMap :: Parser (Symbol, Exp)
+parseVecMap =
   do
     ignore (chunk "map")
     vec <- parseVarName
