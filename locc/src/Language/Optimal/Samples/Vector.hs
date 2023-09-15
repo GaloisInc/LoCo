@@ -18,30 +18,38 @@ mkChar :: IO Char
 mkChar = liftIO (putStrLn "creating element") >> pure 'a'
 
 [optimal|
-type LV = { l : Int, vs : [Char], final : Char }
+type Str = { chars : [Char] }
 
-mkLV : LV
-mkLV = {
-  l = <| pure 6 |>,
-  vs = replicate l <| mkChar |>,
-  idx = <| pure (l - 1) |>,
-  final = index vs idx
+-- Replication from a thunked length
+mkStr1 : Str
+mkStr1 = {
+  len = <| pure 5 |>,
+  chars = replicate len <| mkChar |>
 }
-|]
 
-chrToInt :: Applicative f => Char -> f Int
-chrToInt = pure . fromEnum
+-- Replication from a pure length
+mkStr2 : Int -> Str
+mkStr2 len = {
+  chars = replicate len <| mkChar |>
+}
 
-[optimal|
-type LV2 = { l : Int, cs : [Char], is : [Int], i : Int }
+type Chr = { c : Char }
 
-mkLV2 : LV2
-mkLV2 = {
-  l = <| pure 6 |>,
-  cs = replicate l <| mkChar |>,
-  is = map cs <| chrToInt |>,
-  idx = <| pure (l - 1) |>,
-  i = index is idx
+-- Indexing from a thunked index
+mkChr1 : Chr
+mkChr1 = {
+  len = <| pure 5 |>,
+  vs = replicate len <| mkChar |>,
+  idx = <| pure 4 |>,
+  c = index vs idx
+}
+
+-- Indexing from a pure index
+mkChr2 : Int -> Chr
+mkChr2 idx = {
+  len = <| pure (idx + 1) |>,
+  vs = replicate len <| mkChar |>,
+  c = index vs idx
 }
 |]
 
