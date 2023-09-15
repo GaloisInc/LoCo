@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Language.Optimal.Compile where
 
@@ -46,24 +45,23 @@ compileOptimalModuleDecl ModuleDecl {..} =
 
 compileModuleBindings :: Set Name -> [(Name, ModuleBinding Exp)] -> Q [Stmt]
 compileModuleBindings modBinds orderedModBinds =
-  do
-    sequence [bind nm binding | (nm, binding) <- orderedModBinds]
+  sequence [bind nm binding | (nm, binding) <- orderedModBinds]
   where
     bind nm binding =
       case binding of
         Expression expr -> bindS (varP nm) (exprIntro modBinds expr)
-        VectorReplicate (name -> len) fill -> bindS (varP nm) (vecIntro modBinds len fill)
-        VectorIndex (name -> vec) (name -> idx) -> bindS (varP nm) (vecIndex modBinds vec idx)
-        VectorMap (name -> vec) fn -> bindS (varP nm) (vecMap modBinds vec fn)
-        ModuleIntro (name -> m) (map name -> ps) ->
-          let mkMod = foldl1 AppE (map VarE (m : ps))
+        VectorReplicate len fill -> bindS (varP nm) (vecIntro modBinds len fill)
+        VectorIndex vec idx -> bindS (varP nm) (vecIndex modBinds vec idx)
+        VectorMap vec fn -> bindS (varP nm) (vecMap modBinds vec fn)
+        ModuleIntro m ps ->
+          let mkMod = foldl1 AppE (map (VarE . name) (m : ps))
            in bindS (varP nm) (exprIntro modBinds mkMod)
-        ModuleIndex (name -> m) (name -> f) ->
-          let expr = forceExpr (AppE (VarE f) (VarE m))
+        ModuleIndex m f ->
+          let expr = forceExpr (AppE (VarE (name f)) (VarE (name m)))
               -- We delete `f` from the module bindings because it should always
               -- refer to a record accessor, even if it happens to be previously
               -- bound in the module
-              modBinds' = delete f modBinds
+              modBinds' = delete (name f) modBinds
            in bindS (varP nm) (exprIntro modBinds' expr)
 
 recordResult :: MonadFail m => Optimal.Type -> m (Name, Env Optimal.Type)
@@ -157,25 +155,28 @@ mkForceContext thunkRenaming =
 -------------------------------------------------------------------------------
 
 -- | The result has type m (Thunked m (Vector m a))
-vecIntro :: Set Name -> Name -> Exp -> Q Exp
+vecIntro :: Set Name -> Symbol -> Exp -> Q Exp
 vecIntro modBinds len fill =
   let fillExpr = forceThunks modBinds fill
-   in if len `member` modBinds
-        then [|vReplicateThunk $(varE len) $fillExpr|]
-        else [|vReplicateVal $(varE len) $fillExpr|]
+      lenName = name len
+   in if name len `member` modBinds
+        then [|vReplicateThunk $(varE lenName) $fillExpr|]
+        else [|vReplicateVal $(varE lenName) $fillExpr|]
 
 -- | The result has type m (Thunked m a)
-vecIndex :: Set Name -> Name -> Name -> Q Exp
+vecIndex :: Set Name -> Symbol -> Symbol -> Q Exp
 vecIndex modBinds vec idx =
-  if idx `member` modBinds
-    then [|vIndexThunk $(varE vec) $(varE idx)|]
-    else [|vIndexVal $(varE vec) $(varE idx)|]
+  let vecName = name vec
+      idxName = name idx
+   in if idxName `member` modBinds
+        then [|vIndexThunk $(varE vecName) $(varE idxName)|]
+        else [|vIndexVal $(varE vecName) $(varE idxName)|]
 
-vecMap :: Set Name -> Name -> Exp -> Q Exp
-vecMap modBinds vecThunk f =
+vecMap :: Set Name -> Symbol -> Exp -> Q Exp
+vecMap modBinds vec f =
   do
     let f' = forceThunks modBinds f
-    [|vMap $f' $(varE vecThunk)|]
+    [|vMap $f' $(varE (name vec))|]
 
 --------------------------------------------------------------------------------
 
