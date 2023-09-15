@@ -54,8 +54,7 @@ compileModuleBindings modBinds orderedModBinds =
         Expression expr -> bindS (varP nm) (exprIntro modBinds expr)
         VectorReplicate (name -> len) fill -> bindS (varP nm) (vecIntro modBinds len fill)
         VectorIndex (name -> vec) (name -> idx) -> bindS (varP nm) (vecIndex modBinds vec idx)
-        VectorMap (name -> vec) fn
-          | otherwise -> bindS (varP nm) (vecMap modBinds vec fn)
+        VectorMap (name -> vec) fn -> bindS (varP nm) (vecMap modBinds vec fn)
         ModuleIntro (name -> m) (map name -> ps) ->
           let mkMod = foldl1 AppE (map VarE (m : ps))
            in bindS (varP nm) (exprIntro modBinds mkMod)
