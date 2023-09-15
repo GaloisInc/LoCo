@@ -15,12 +15,17 @@ import Language.Optimal.Compile.Haskell.Free (freeVars)
 import Language.Optimal.Compile.Haskell.Rename (rename)
 import Language.Optimal.Syntax
 import Language.Optimal.Syntax qualified as Optimal
-import Language.Optimal.Typecheck (expandType)
+import Language.Optimal.Typecheck (checkArity, expandType)
 import Language.Optimal.Util (Named (name))
 
 compileOptimalModuleDecls :: Env Optimal.Type -> [ModuleDecl] -> Q [Dec]
 compileOptimalModuleDecls tyEnv modDecls =
-  concat <$> mapM (compileOptimalModuleDecl . elaborate) modDecls
+  do
+    let elaboratedModDecls = map elaborate modDecls
+    case mapM_ checkArity elaboratedModDecls of
+      Left err -> fail err
+      Right () -> pure ()
+    concat <$> mapM compileOptimalModuleDecl elaboratedModDecls
   where
     elaborate ModuleDecl {..} = ModuleDecl {modTy = expandType tyEnv modTy, ..}
 
