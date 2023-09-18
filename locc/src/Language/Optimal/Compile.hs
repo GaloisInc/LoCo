@@ -55,7 +55,7 @@ compileModuleBindings modBinds orderedModBinds =
     compileBinding binding =
       case binding of
         Expression expr -> exprIntro modBinds expr
-        VectorReplicate len fill -> vecIntro modBinds len fill
+        VectorReplicate len fill -> vecReplicate modBinds len fill
         VectorIndex vec idx -> vecIndex modBinds vec idx
         VectorMap vec fn -> vecMap modBinds vec fn
         ModuleIntro m params -> modIntro modBinds m params
@@ -152,8 +152,8 @@ mkForceContext thunkRenaming =
 -------------------------------------------------------------------------------
 
 -- | The result has type m (Thunked m (Vector m a))
-vecIntro :: Set Name -> Symbol -> Exp -> Q Exp
-vecIntro modBinds len fill =
+vecReplicate :: Set Name -> Symbol -> Exp -> Q Exp
+vecReplicate modBinds len fill =
   let fillExpr = forceThunks modBinds fill
       lenName = name len
    in if name len `member` modBinds
