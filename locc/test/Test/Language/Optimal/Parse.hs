@@ -4,7 +4,6 @@
 
 module Test.Language.Optimal.Parse (tests) where
 
-import Data.Map qualified as Map
 import Data.Text (Text)
 import Language.Haskell.TH.Syntax
 import Language.Optimal.Parse
@@ -142,13 +141,17 @@ modBindingTests =
   testGroup
     "module bindings"
     [ testSuccess
-        "single value binding"
+        "value binding"
         "{ x = <| pure 3 |> }"
         [("x", Expression (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
-        "single vector binding"
+        "vector replicate binding"
         "{ x = replicate l <| pure 3 |> }"
         [("x", VectorReplicate "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+      testSuccess
+        "vector generate binding"
+        "{ x = generate l <| pure 3 |> }"
+        [("x", VectorGenerate "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
         "multiple bindings"
         "{ x = <| pure 3 |>, y = replicate x <| pure 'a' |> }"

@@ -75,6 +75,7 @@ parseOptimalModuleBindings = parseBindings (single '=') bindingBody
       choice
         [ Expression <$> parseValExpr,
           uncurry VectorReplicate <$> parseVecReplicate,
+          uncurry VectorGenerate <$> parseVecGenerate,
           uncurry VectorMap <$> parseVecMap,
           uncurry VectorIndex <$> parseVecIndex,
           uncurry ModuleIntro <$> parseModIntro,
@@ -155,6 +156,15 @@ parseVecReplicate :: Parser (Symbol, Exp)
 parseVecReplicate =
   do
     ignore (chunk "replicate")
+    len <- parseVarName
+    expr <- parseValExpr
+    pure (len, expr)
+
+-- | "generate i <| e |>"
+parseVecGenerate :: Parser (Symbol, Exp)
+parseVecGenerate =
+  do
+    ignore (chunk "generate")
     len <- parseVarName
     expr <- parseValExpr
     pure (len, expr)

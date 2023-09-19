@@ -54,6 +54,22 @@ vReplicateVal vecLen fillAction = vec >>= delayValue
         vecContent <- V.replicateM vecLen (delayAction fillAction)
         pure Vector {..}
 
+vGenerateThunk :: MonadIO m => Thunked m Int -> (Int -> m a) -> m (Thunked m (Vector m a))
+vGenerateThunk lenThunk fillAction =
+  delayAction $
+    do
+      vecLen <- force lenThunk
+      vecContent <- V.generateM vecLen (delayAction . fillAction)
+      pure Vector {..}
+
+vGenerateVal :: MonadIO m => Int -> (Int -> m a) -> m (Thunked m (Vector m a))
+vGenerateVal vecLen fillAction = vec >>= delayValue
+  where
+    vec =
+      do
+        vecContent <- V.generateM vecLen (delayAction . fillAction)
+        pure Vector {..}
+
 -------------------------------------------------------------------------------
 
 vIndexThunk :: MonadIO m => Thunked m (Vector m a) -> Thunked m Int -> m (Thunked m a)

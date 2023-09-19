@@ -23,6 +23,7 @@ data ModuleDecl = ModuleDecl
 data ModuleBinding e
   = Expression e
   | VectorReplicate Symbol e -- vector introduction
+  | VectorGenerate Symbol e -- vector introduction
   | VectorMap Symbol e -- vector transformation
   | VectorIndex Symbol Symbol -- vector elimination
   | ModuleIntro
@@ -81,6 +82,7 @@ bindingThunks modBinds binding =
   case binding of
     Expression e -> go e
     VectorReplicate len fill -> go (name len) <> go fill
+    VectorGenerate len fill -> go (name len) <> go fill
     VectorMap vec transform -> go (name vec) <> go transform
     VectorIndex vec idx -> go (name vec) <> go (name idx)
     ModuleIntro modName modArgs -> foldMap (go . name) modArgs

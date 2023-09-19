@@ -56,6 +56,7 @@ compileModuleBindings modBinds orderedModBinds =
       case binding of
         Expression expr -> exprIntro modBinds expr
         VectorReplicate len fill -> vecReplicate modBinds len fill
+        VectorGenerate len fill -> vecGenerate modBinds len fill
         VectorIndex vec idx -> vecIndex modBinds vec idx
         VectorMap vec fn -> vecMap modBinds vec fn
         ModuleIntro m params -> modIntro modBinds m params
@@ -159,6 +160,14 @@ vecReplicate modBinds len fill =
    in if name len `member` modBinds
         then [|vReplicateThunk $(varE lenName) $fillExpr|]
         else [|vReplicateVal $(varE lenName) $fillExpr|]
+
+vecGenerate :: Set Name -> Symbol -> Exp -> Q Exp
+vecGenerate modBinds len fill =
+  let fillExpr = forceThunks modBinds fill
+      lenName = name len
+   in if name len `member` modBinds
+        then [|vGenerateThunk $(varE lenName) $fillExpr|]
+        else [|vGenerateVal $(varE lenName) $fillExpr|]
 
 -- | The result has type m (Thunked m a)
 vecIndex :: Set Name -> Symbol -> Symbol -> Q Exp

@@ -17,6 +17,9 @@ import Thunk.Vector
 mkChar :: IO Char
 mkChar = liftIO (putStrLn "creating element") >> pure 'a'
 
+mkChar' :: Int -> IO Char
+mkChar' idx = liftIO (putStrLn ("creating " <> show idx <> " element") >> pure (toEnum idx))
+
 [optimal|
 type Str = { chars : [Char] }
 
@@ -31,6 +34,19 @@ mkStr1 = {
 mkStr2 : Int -> Str
 mkStr2 len = {
   chars = replicate len <| mkChar |>
+}
+
+-- Generation from a thunked length
+generateStrThunked : Str
+generateStrThunked = {
+  len = <| pure 5 |>,
+  chars = generate len <| mkChar' |>
+}
+
+-- Generation from a pure length
+generateStrPure : Int -> Str
+generateStrPure len = {
+  chars = generate len <| mkChar' |>
 }
 
 type Chr = { c : Char }
