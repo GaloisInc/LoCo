@@ -24,15 +24,15 @@ mkChar' idx = liftIO (putStrLn ("creating " <> show idx <> " element") >> pure (
 type Str = { chars : [Char] }
 
 -- Replication from a thunked length
-mkStr1 : Str
-mkStr1 = {
+replicateStrThunked : Str
+replicateStrThunked = {
   len = <| pure 5 |>,
   chars = replicate len <| mkChar |>
 }
 
 -- Replication from a pure length
-mkStr2 : Int -> Str
-mkStr2 len = {
+replicateStrPure : Int -> Str
+replicateStrPure len = {
   chars = replicate len <| mkChar |>
 }
 
@@ -52,8 +52,8 @@ generateStrPure len = {
 type Chr = { c : Char }
 
 -- Indexing from a thunked index
-mkChr1 : Chr
-mkChr1 = {
+indexStrThunked : Chr
+indexStrThunked = {
   len = <| pure 5 |>,
   vs = replicate len <| mkChar |>,
   idx = <| pure 4 |>,
@@ -61,8 +61,8 @@ mkChr1 = {
 }
 
 -- Indexing from a pure index
-mkChr2 : Int -> Chr
-mkChr2 idx = {
+indexStrPure : Int -> Chr
+indexStrPure idx = {
   len = <| pure (idx + 1) |>,
   vs = replicate len <| mkChar |>,
   c = index vs idx
