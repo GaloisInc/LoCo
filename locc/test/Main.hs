@@ -7,6 +7,7 @@ import Test.Language.Optimal.Compile.Haskell.Rename qualified
 import Test.Language.Optimal.Parse qualified
 import Test.Language.Optimal.Typecheck qualified
 import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Thunk.Vector qualified
 
 main :: IO ()
 main = defaultMain tests
@@ -20,5 +21,6 @@ tests =
       Test.Language.Optimal.Compile.Haskell.Free.tests,
       Test.Language.Optimal.Compile.Haskell.Rename.tests,
       Test.Language.Optimal.Parse.tests,
-      Test.Language.Optimal.Typecheck.tests
+      Test.Language.Optimal.Typecheck.tests,
+      Test.Thunk.Vector.tests
     ]

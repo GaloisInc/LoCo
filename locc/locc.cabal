@@ -90,8 +90,14 @@ test-suite locc-test
         Test.Language.Optimal.Compile.Haskell.Rename
         Test.Language.Optimal.Parse
         Test.Language.Optimal.Typecheck
+
+        Test.Thunk.Vector
+
         Util
-    
+
+    default-extensions:
+        TemplateHaskell
+
     build-depends:
         base ^>=4.16.4.0,
         locc,
@@ -102,4 +108,5 @@ test-suite locc-test
         tasty-hunit ^>=0.10.0.3,
         tasty-quickcheck ^>=0.10.2,
         template-haskell ^>=2.18.0.0,
-        text ^>=1.2.5.0
+        text ^>=1.2.5.0,
+        vector ^>=0.13.0.0
