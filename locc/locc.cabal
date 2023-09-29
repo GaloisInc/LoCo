@@ -26,6 +26,7 @@ library
         Language.Optimal.Compile
         Language.Optimal.Compile.Haskell.CollectBindings
         Language.Optimal.Compile.Haskell.Free
+        Language.Optimal.Compile.Haskell.TH
         Language.Optimal.Compile.Haskell.Rename
         Language.Optimal.Compile.Haskell.RenameFree
         Language.Optimal.Parse

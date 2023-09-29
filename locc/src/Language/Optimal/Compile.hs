@@ -11,14 +11,15 @@ import Data.Set qualified as Set
 import Language.Haskell.TH
 import Language.Haskell.TH qualified as TH
 import Language.Optimal.Collection
-import Language.Optimal.Compile.Haskell.Free (freeVars)
-import Language.Optimal.Compile.Haskell.Rename (rename)
+import Language.Optimal.Compile.Haskell.Free (Free, freeVars)
+import Language.Optimal.Compile.Haskell.Rename (Rename, rename)
+import Language.Optimal.Compile.Haskell.TH (Haskell (asExp))
 import Language.Optimal.Syntax
 import Language.Optimal.Syntax qualified as Optimal
 import Language.Optimal.Typecheck (checkArity, expandType)
 import Language.Optimal.Util (Named (name))
 
-compileOptimalModuleDecls :: Env Optimal.Type -> [ModuleDecl] -> Q [Dec]
+compileOptimalModuleDecls :: (Free e, Haskell e, Rename e) => Env Optimal.Type -> [ModuleDecl e] -> Q [Dec]
 compileOptimalModuleDecls tyEnv modDecls =
   do
     let elaboratedModDecls = map elaborate modDecls
@@ -29,7 +30,7 @@ compileOptimalModuleDecls tyEnv modDecls =
   where
     elaborate ModuleDecl {..} = ModuleDecl {modTy = expandType tyEnv modTy, ..}
 
-compileOptimalModuleDecl :: ModuleDecl -> Q [Dec]
+compileOptimalModuleDecl :: (Free e, Haskell e, Rename e) => ModuleDecl e -> Q [Dec]
 compileOptimalModuleDecl ModuleDecl {..} =
   do
     orderedModuleBindings <- sortModuleBindings modEnv'
@@ -48,7 +49,7 @@ compileOptimalModuleDecl ModuleDecl {..} =
     modEnv' = Map.mapKeys name modEnv
     modBinds = Map.keysSet modEnv'
 
-compileModuleBindings :: Set Name -> [(Name, ModuleBinding Exp)] -> Q [Stmt]
+compileModuleBindings :: (Free e, Haskell e, Rename e) => Set Name -> [(Name, ModuleBinding e)] -> Q [Stmt]
 compileModuleBindings modBinds orderedModBinds =
   sequence [bindS (varP nm) (compileBinding binding) | (nm, binding) <- orderedModBinds]
   where
@@ -92,22 +93,23 @@ constructModule fields tyName =
 --------------------------------------------------------------------------------
 
 -- | Result has type `m (Thunked m a)`
-exprIntro :: Set Name -> Exp -> Q Exp
+exprIntro :: (Free e, Haskell e, Rename e) => Set Name -> e -> Q Exp
 exprIntro modBinds expr =
   [|delayAction $(forceThunks modBinds expr)|]
 
 -- | Create a version of the expression that evaluates itself in a context in
 -- which all its variables that refer to thunks have been forced
-forceThunks :: Set Name -> Exp -> Q Exp
+forceThunks :: (Free e, Haskell e, Rename e) => Set Name -> e -> Q Exp
 forceThunks modBinds expr =
   do
     thunkRenaming <- mkRenaming modBinds expr
     let forceCtx = mkForceContext thunkRenaming
     let f n = fromMaybe n (thunkRenaming Map.!? n)
     let expr' = rename f expr
+    thExp <- either fail pure (asExp expr')
     case forceCtx of
-      [] -> pure expr'
-      _ -> pure (DoE Nothing (forceCtx <> [NoBindS expr']))
+      [] -> pure thExp
+      _ -> pure (DoE Nothing (forceCtx <> [NoBindS thExp]))
 
 -- | Name refers to thunk, result has type `m a`
 --
@@ -136,7 +138,7 @@ forcePrintExpr s e =
 -- | Create fresh names for all the thunks in an expression
 --
 -- NOTE: could be a Bimap, if need be
-mkRenaming :: Set Name -> Exp -> Q (Map Name Name)
+mkRenaming :: Free e => Set Name -> e -> Q (Map Name Name)
 mkRenaming modBinds expr =
   let thunkVars = freeVars expr `Set.intersection` modBinds
    in sequence (Map.fromSet freshen thunkVars)
@@ -153,7 +155,7 @@ mkForceContext thunkRenaming =
 -------------------------------------------------------------------------------
 
 -- | The result has type m (Thunked m (Vector m a))
-vecReplicate :: Set Name -> Symbol -> Exp -> Q Exp
+vecReplicate :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
 vecReplicate modBinds len fill =
   let fillExpr = forceThunks modBinds fill
       lenName = name len
@@ -161,7 +163,7 @@ vecReplicate modBinds len fill =
         then [|vReplicateThunk $(varE lenName) $fillExpr|]
         else [|vReplicateVal $(varE lenName) $fillExpr|]
 
-vecGenerate :: Set Name -> Symbol -> Exp -> Q Exp
+vecGenerate :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
 vecGenerate modBinds len fill =
   let fillExpr = forceThunks modBinds fill
       lenName = name len
@@ -178,7 +180,7 @@ vecIndex modBinds vec idx =
         then [|vIndexThunk $(varE vecName) $(varE idxName)|]
         else [|vIndexVal $(varE vecName) $(varE idxName)|]
 
-vecMap :: Set Name -> Symbol -> Exp -> Q Exp
+vecMap :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
 vecMap modBinds vec f =
   do
     let f' = forceThunks modBinds f

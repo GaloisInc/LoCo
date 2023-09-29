@@ -4,6 +4,7 @@ import Data.Char (isSpace)
 import Data.List (isPrefixOf)
 import Data.Map qualified as Map
 import Data.Text qualified as Text
+import Language.Haskell.Meta (parseExp)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Language.Optimal.Compile (compileOptimalModuleDecls, compileOptimalTypeDecls)
@@ -22,7 +23,7 @@ optimal =
 decls :: String -> Q [Dec]
 decls src =
   do
-    (tyDecls, modDecls) <- either fail pure (parseOptimal (Text.pack src'))
+    (tyDecls, modDecls) <- either fail pure (parseOptimal parseExp (Text.pack src'))
 
     let tyEnv = Map.fromList [(tdName, tdType) | TypeDecl {..} <- tyDecls]
 

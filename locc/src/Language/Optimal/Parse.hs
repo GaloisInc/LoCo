@@ -8,58 +8,58 @@ module Language.Optimal.Parse where
 
 import Control.Applicative (Alternative)
 import Control.Monad (MonadPlus)
+import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Data.Char (isAlphaNum, isLower, isUpper)
 import Data.Either (partitionEithers)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Void (Void)
-import Language.Haskell.Meta (parseExp)
-import Language.Haskell.TH (Exp)
 import Language.LoCoEssential.Essence ()
 import Language.LoCoEssential.SimpleExpr.Parse (braced, ignore, ws)
 import Language.Optimal.Syntax
 import Text.Megaparsec hiding (runParser)
 import Text.Megaparsec qualified as Megaparsec
 
-newtype Parser a = Parser {unParser :: Parsec Void Text a}
+newtype Parser e a = Parser {unParser :: ReaderT (String -> Either String e) (Parsec Void Text) a}
   deriving
     ( Functor,
       Applicative,
       Monad,
       Alternative,
       MonadPlus,
+      MonadReader (String -> Either String e),
       MonadParsec Void Text
     )
 
-runParser :: Parser a -> Text -> Either String a
-runParser (Parser parser) text =
-  case Megaparsec.runParser (ws >> parser) "<stdin>" text of
+runParser :: Parser e a -> (String -> Either String e) -> Text -> Either String a
+runParser (Parser parser) parseE text =
+  case Megaparsec.runParser (ws >> runReaderT parser parseE) "<stdin>" text of
     Left errBundle -> Left (errorBundlePretty errBundle)
     Right res -> pure res
 
 -------------------------------------------------------------------------------
 
 -- | Parse a sequence of Optimal module and type declarations.
-parseOptimal :: Text -> Either String ([TypeDecl], [ModuleDecl])
-parseOptimal text =
+parseOptimal :: (String -> Either String e) -> Text -> Either String ([TypeDecl], [ModuleDecl e])
+parseOptimal parseE text =
   do
-    decls <- runParser (many (eitherP parseOptimalTypeDecl parseOptimalModuleDecl)) text
+    decls <- runParser (many (eitherP parseOptimalTypeDecl parseOptimalModuleDecl)) parseE text
     pure (partitionEithers decls)
 
 -------------------------------------------------------------------------------
 
-parseOptimalModuleDecl :: Parser ModuleDecl
+parseOptimalModuleDecl :: Parser e (ModuleDecl e)
 parseOptimalModuleDecl =
   do
     (modName, modTy) <- parseOptimalModuleTypeAscription
     (modParams, binds) <- parseOptimalModuleBody modName
     pure ModuleDecl {modTy = modTy, modName = modName, modParams = modParams, modEnv = binds}
 
-parseOptimalModuleTypeAscription :: Parser (Symbol, Type)
+parseOptimalModuleTypeAscription :: Parser e (Symbol, Type)
 parseOptimalModuleTypeAscription = parseBinop parseVarName (single ':') parseOptimalType
 
-parseOptimalModuleBody :: Symbol -> Parser ([Symbol], Env (ModuleBinding Exp))
+parseOptimalModuleBody :: Symbol -> Parser e ([Symbol], Env (ModuleBinding e))
 parseOptimalModuleBody modName =
   do
     ignore (chunk modName)
@@ -68,21 +68,22 @@ parseOptimalModuleBody modName =
     body <- parseOptimalModuleBindings
     pure (params, body)
 
-parseOptimalModuleBindings :: Parser (Env (ModuleBinding Exp))
-parseOptimalModuleBindings = parseBindings (single '=') bindingBody
-  where
-    bindingBody =
-      choice
-        [ Expression <$> parseValExpr,
-          uncurry VectorReplicate <$> parseVecReplicate,
-          uncurry VectorGenerate <$> parseVecGenerate,
-          uncurry VectorMap <$> parseVecMap,
-          uncurry VectorIndex <$> parseVecIndex,
-          uncurry ModuleIntro <$> parseModIntro,
-          uncurry ModuleIndex <$> parseModIndex
-        ]
+parseOptimalModuleBindings :: Parser e (Env (ModuleBinding e))
+parseOptimalModuleBindings = parseBindings (single '=') parseOptimalModuleExpr
 
-parseOptimalTypeDecl :: Parser TypeDecl
+parseOptimalModuleExpr :: Parser e (ModuleBinding e)
+parseOptimalModuleExpr =
+  choice
+    [ Expression <$> parseValExpr,
+      uncurry VectorReplicate <$> parseVecReplicate,
+      uncurry VectorGenerate <$> parseVecGenerate,
+      uncurry VectorMap <$> parseVecMap,
+      uncurry VectorIndex <$> parseVecIndex,
+      uncurry ModuleIntro <$> parseModIntro,
+      uncurry ModuleIndex <$> parseModIndex
+    ]
+
+parseOptimalTypeDecl :: Parser e TypeDecl
 parseOptimalTypeDecl =
   do
     ignore (chunk "type")
@@ -108,10 +109,10 @@ T -> <str>
 T' -> "->" Type
     | epsilon
 -}
-parseOptimalType :: Symbol -> Parser Type
+parseOptimalType :: Symbol -> Parser e Type
 parseOptimalType name = t >>= t'
   where
-    t :: Parser Type
+    -- t :: Parser e Type
     t =
       choice
         [ List <$> bracketed go,
@@ -121,7 +122,7 @@ parseOptimalType name = t >>= t'
         ]
         <* ws
 
-    t' :: Type -> Parser Type
+    -- t' :: Type -> Parser e Type
     t' ty =
       choice
         [ ignore (chunk "->") >> Arrow ty <$> go,
@@ -134,25 +135,35 @@ parseOptimalType name = t >>= t'
     bracketed = between (ignore (single '[')) (ignore (single ']'))
     parenthesized = between (ignore (single '(')) (ignore (single ')'))
 
-parseOptimalRecordType :: Symbol -> Parser (Env Type)
+parseOptimalRecordType :: Symbol -> Parser e (Env Type)
 parseOptimalRecordType name = parseBindings (single ':') (parseOptimalType name)
 
 -------------------------------------------------------------------------------
 
+-- runEither :: (String -> Either String a) -> String -> Parser e a
+-- runEither p str =
+--   case p str of
+--     Left err -> error ""
+--     Right r -> pure r
+
+-- parseHSExpr :: Parser Exp
+-- parseHSExpr
+
 -- | "<| e |>"
-parseValExpr :: Parser Exp
+parseValExpr :: Parser e e
 parseValExpr =
   do
     ignore (chunk left)
     str <- manyTill anySingle (chunk right)
-    case parseExp str of
+    parseE <- ask
+    case parseE str of
       Left err -> error $ "parse error: " <> err
       Right expr -> pure expr
   where
     (left, right) = ("<|", "|>")
 
 -- | "replicate i <| e |>"
-parseVecReplicate :: Parser (Symbol, Exp)
+parseVecReplicate :: Parser e (Symbol, e)
 parseVecReplicate =
   do
     ignore (chunk "replicate")
@@ -161,7 +172,7 @@ parseVecReplicate =
     pure (len, expr)
 
 -- | "generate i <| e |>"
-parseVecGenerate :: Parser (Symbol, Exp)
+parseVecGenerate :: Parser e (Symbol, e)
 parseVecGenerate =
   do
     ignore (chunk "generate")
@@ -170,7 +181,7 @@ parseVecGenerate =
     pure (len, expr)
 
 -- | "index xs i"
-parseVecIndex :: Parser (Symbol, Symbol)
+parseVecIndex :: Parser e (Symbol, Symbol)
 parseVecIndex =
   do
     ignore (chunk "index")
@@ -179,7 +190,7 @@ parseVecIndex =
     pure (vec, idx)
 
 -- | "map xs <| e |>"
-parseVecMap :: Parser (Symbol, Exp)
+parseVecMap :: Parser e (Symbol, e)
 parseVecMap =
   do
     ignore (chunk "map")
@@ -188,7 +199,7 @@ parseVecMap =
     pure (vec, expr)
 
 -- | "module m [p ...]"
-parseModIntro :: Parser (Symbol, [Symbol])
+parseModIntro :: Parser e (Symbol, [Symbol])
 parseModIntro =
   do
     ignore (chunk "module")
@@ -198,7 +209,7 @@ parseModIntro =
     pure (md, params)
 
 -- | "m.x"
-parseModIndex :: Parser (Symbol, Symbol)
+parseModIndex :: Parser e (Symbol, Symbol)
 parseModIndex =
   do
     md <- parseVarName
@@ -212,7 +223,7 @@ parseModIndex =
 -- | Parse a curly-braced, comma-separated, non-empty set of "bindings",
 -- producing a mapping from symbols to expressions. Parsing is parametric over
 -- binding syntax ('=', e.g.) and expression syntax (e.g. `Exp`)
-parseBindings :: Parser separator -> Parser rhs -> Parser (Env rhs)
+parseBindings :: Parser e separator -> Parser e rhs -> Parser e (Env rhs)
 parseBindings parseOp parseRhs =
   do
     binds <- braced (binding `sepBy1` separator)
@@ -221,7 +232,7 @@ parseBindings parseOp parseRhs =
     binding = parseBinop parseVarName parseOp (const parseRhs)
     separator = single ',' >> ws
 
-parseBinop :: Parser lhs -> Parser op -> (lhs -> Parser rhs) -> Parser (lhs, rhs)
+parseBinop :: Parser e lhs -> Parser e op -> (lhs -> Parser e rhs) -> Parser e (lhs, rhs)
 parseBinop parseLhs parseOp parseRhs =
   do
     lhs <- parseLhs
@@ -231,10 +242,10 @@ parseBinop parseLhs parseOp parseRhs =
     ws
     pure (lhs, rhs)
 
-parseBind :: Parser lhs -> (lhs -> Parser rhs) -> Parser (lhs, rhs)
+parseBind :: Parser e lhs -> (lhs -> Parser e rhs) -> Parser e (lhs, rhs)
 parseBind lhs = parseBinop lhs (single '=')
 
-parseAscription :: Parser lhs -> (lhs -> Parser rhs) -> Parser (lhs, rhs)
+parseAscription :: Parser e lhs -> (lhs -> Parser e rhs) -> Parser e (lhs, rhs)
 parseAscription lhs = parseBinop lhs (single ':')
 
 -------------------------------------------------------------------------------

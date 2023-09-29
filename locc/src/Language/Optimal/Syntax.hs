@@ -12,11 +12,11 @@ import Language.LoCo.Toposort (topoSortPossibly)
 import Language.Optimal.Compile.Haskell.Free (Free (..))
 import Language.Optimal.Util
 
-data ModuleDecl = ModuleDecl
+data ModuleDecl e = ModuleDecl
   { modTy :: Type,
     modName :: Symbol,
     modParams :: [Symbol],
-    modEnv :: Env (ModuleBinding Exp)
+    modEnv :: Env (ModuleBinding e)
   }
   deriving (Eq, Show)
 

@@ -4,7 +4,10 @@
 
 module Test.Language.Optimal.Parse (tests) where
 
+-- Specialized to Haskell expressions for now
+
 import Data.Text (Text)
+import Language.Haskell.Meta (parseExp)
 import Language.Haskell.TH.Syntax
 import Language.Optimal.Parse
 import Language.Optimal.Syntax (ModuleBinding (..), Type (..))
@@ -25,15 +28,15 @@ tests =
       -- modTyUnaliasTests
     ]
 
-testParseSuccess :: (Eq a, Show a) => Parser a -> Text -> a -> Assertion
+testParseSuccess :: (Eq a, Show a) => Parser Exp a -> Text -> a -> Assertion
 testParseSuccess p on expected =
-  case runParser p on of
+  case runParser p parseExp on of
     Left err -> assertFailure err
     Right actual -> actual @?= expected
 
-testParseFailure :: (Eq a, Show a) => Parser a -> Text -> Assertion
+testParseFailure :: (Eq a, Show a) => Parser Exp a -> Text -> Assertion
 testParseFailure p on =
-  case runParser p on of
+  case runParser p parseExp on of
     Left _err -> pure ()
     Right _ -> assertFailure "parsing succeeded when it was expected to fail"
 

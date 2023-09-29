@@ -19,7 +19,7 @@ expandType tyEnv ty =
 
 -- | Check whether module declarations have an arity matching their type
 -- signature
-checkArity :: ModuleDecl -> Either String ()
+checkArity :: ModuleDecl e -> Either String ()
 checkArity ModuleDecl {..} = check modTy modParams
   where
     check ty params =
