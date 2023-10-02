@@ -33,7 +33,7 @@ vGenerate vecLen fillAction = vec >>= delayValue
 -------------------------------------------------------------------------------
 
 vIndex :: MonadIO m => Vector m a -> Int -> m (Thunked m a)
-vIndex Vector{..} idx =
+vIndex Vector {..} idx =
   delayAction $
     do
       force (vecContent V.! idx)
@@ -41,7 +41,7 @@ vIndex Vector{..} idx =
 --------------------------------------------------------------------------------
 
 vMap :: MonadIO m => (a -> m b) -> Vector m a -> m (Thunked m (Vector m b))
-vMap f Vector{..} =
+vMap f Vector {..} =
   delayAction $
     do
       Vector <$> V.mapM (tmapM f) vecContent
