@@ -157,28 +157,24 @@ mkForceContext thunkRenaming =
 -- | The result has type m (Thunked m (Vector m a))
 vecReplicate :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
 vecReplicate modBinds len fill =
-  let fillExpr = forceThunks modBinds fill
-      lenName = name len
-   in if name len `member` modBinds
-        then [|vReplicateThunk $(varE lenName) $fillExpr|]
-        else [|vReplicateVal $(varE lenName) $fillExpr|]
+  do
+    let fillExp = either fail pure (asExp fill)
+    expr <- [|vReplicate $(varE (name len)) $fillExp|]
+    forceThunks modBinds expr
 
 vecGenerate :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
 vecGenerate modBinds len fill =
-  let fillExpr = forceThunks modBinds fill
-      lenName = name len
-   in if name len `member` modBinds
-        then [|vGenerateThunk $(varE lenName) $fillExpr|]
-        else [|vGenerateVal $(varE lenName) $fillExpr|]
+  do
+    let fillExp = either fail pure (asExp fill)
+    expr <- [|vGenerate $(varE (name len)) $fillExp|]
+    forceThunks modBinds expr
 
 -- | The result has type m (Thunked m a)
 vecIndex :: Set Name -> Symbol -> Symbol -> Q Exp
 vecIndex modBinds vec idx =
-  let vecName = name vec
-      idxName = name idx
-   in if idxName `member` modBinds
-        then [|vIndexThunk $(varE vecName) $(varE idxName)|]
-        else [|vIndexVal $(varE vecName) $(varE idxName)|]
+  do
+    expr <- [|vIndex $(varE (name vec)) $(varE (name idx))|]
+    forceThunks modBinds expr
 
 vecMap :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
 vecMap modBinds vec f =
