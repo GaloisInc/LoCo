@@ -177,10 +177,11 @@ vecIndex modBinds vec idx =
     forceThunks modBinds expr
 
 vecMap :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
-vecMap modBinds vec f =
+vecMap modBinds vec fn =
   do
-    let f' = forceThunks modBinds f
-    [|vMap $f' $(varE (name vec))|]
+    let fnExp = either fail pure (asExp fn)
+    expr <- [|vMap $fnExp $(varE (name vec))|]
+    forceThunks modBinds expr
 
 --------------------------------------------------------------------------------
 
