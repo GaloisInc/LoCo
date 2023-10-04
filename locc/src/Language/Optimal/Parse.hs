@@ -226,7 +226,7 @@ parseModIndex =
 parseBindings :: Parser e separator -> Parser e rhs -> Parser e (Env rhs)
 parseBindings parseOp parseRhs =
   do
-    binds <- braced (binding `sepBy1` separator)
+    binds <- braced (binding `sepEndBy1` separator)
     pure (Map.fromList binds)
   where
     binding = parseBinop parseVarName parseOp (const parseRhs)
