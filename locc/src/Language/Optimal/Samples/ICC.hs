@@ -43,17 +43,6 @@ parseInt src region =
     asInt = foldl' shiftAdd 0
     shiftAdd int byte = int `shiftL` 8 .|. fromIntegral byte
 
---------------------------------------------------------------------------------
--- Does this break the abstraction of generated structures? We already expect
--- users to know how to force things...
-entryFromHeader :: MonadIO m => Header m -> Source -> m (Entry m)
-entryFromHeader Header {..} src =
-  do
-    l <- force hLen
-    o <- force hOff
-    let r = between o (o + l)
-    parseEntry src r
-
 parseHeader :: MonadIO m => Source -> Region -> m (Header m)
 parseEntry :: MonadIO m => Source -> Region -> m (Entry m)
 parseICC :: MonadIO m => Source -> m (ICC m)
@@ -101,6 +90,15 @@ parseICC src = {
   iccEntries = map iccHeaders <| \h -> entryFromHeader h src |>,
 }
 
+entryFromHeader : Header -> Source -> Entry
+entryFromHeader hdr src = {
+  o = hdr.hOff,
+  l = hdr.hLen,
+  r = <| pure (between o (o + l)) |>,
+  entry = module parseEntry src r,
+  eBytes = entry.eBytes,
+}
+
 iccHeader : Source -> Int -> Header
 iccHeader src idx = {
   icc = module parseICC src,
@@ -109,6 +107,7 @@ iccHeader src idx = {
   hLen = header.hLen,
   hOff = header.hOff
 }
+
 iccEntry : Source -> Int -> Entry
 iccEntry src idx = {
   icc = module parseICC src,
