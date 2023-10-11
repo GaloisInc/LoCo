@@ -83,10 +83,6 @@ parseICC src = {
   headersRegions = generate iccLen <| \i -> pure (between (i * 8 + 4) (i * 8 + 12)) |>,
   iccHeaders = map headersRegions <| \r -> parseHeader src r |>,
   
-  -- Want to deconstruct a Header in Haskell - but shouldn't, because we can't
-  -- rely on Haskell as source/want to keep generated structures somewhat
-  -- abstracted. Other options?
-  -- - 
   iccEntries = map iccHeaders <| \h -> entryFromHeader h src |>,
 }
 
