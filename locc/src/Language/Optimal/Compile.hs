@@ -106,7 +106,7 @@ forceThunks modBinds expr =
     let forceCtx = mkForceContext thunkRenaming
     let f n = fromMaybe n (thunkRenaming Map.!? n)
     let expr' = rename f expr
-    thExp <- either fail pure (asExp expr')
+    thExp <- asExp expr'
     case forceCtx of
       [] -> pure thExp
       _ -> pure (DoE Nothing (forceCtx <> [NoBindS thExp]))
@@ -158,15 +158,13 @@ mkForceContext thunkRenaming =
 vecReplicate :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
 vecReplicate modBinds len fill =
   do
-    let fillExp = either fail pure (asExp fill)
-    expr <- [|vReplicate $(varE (name len)) $fillExp|]
+    expr <- [|vReplicate $(varE (name len)) $(asExp fill)|]
     forceThunks modBinds expr
 
 vecGenerate :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
 vecGenerate modBinds len fill =
   do
-    let fillExp = either fail pure (asExp fill)
-    expr <- [|vGenerate $(varE (name len)) $fillExp|]
+    expr <- [|vGenerate $(varE (name len)) $(asExp fill)|]
     forceThunks modBinds expr
 
 -- | The result has type m (Thunked m a)
@@ -179,8 +177,7 @@ vecIndex modBinds vec idx =
 vecMap :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
 vecMap modBinds vec fn =
   do
-    let fnExp = either fail pure (asExp fn)
-    expr <- [|vMap $fnExp $(varE (name vec))|]
+    expr <- [|vMap $(asExp fn) $(varE (name vec))|]
     forceThunks modBinds expr
 
 --------------------------------------------------------------------------------
