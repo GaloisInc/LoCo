@@ -141,6 +141,9 @@ renameFreeExp binds f expr =
           (matches', matchFrees) = unzip (map go matches)
        in (CaseE e' matches', mconcat (eFrees : matchFrees))
     DoE m stmts -> mkDo m binds stmts (mempty, mempty)
+    SigE e ty ->
+      let (e', eFrees) = go e
+       in (SigE e' ty, eFrees)
     _ -> unimplemented "renameFreeExp" expr
   where
     go :: RenameFree a => a -> (a, FreeVars)

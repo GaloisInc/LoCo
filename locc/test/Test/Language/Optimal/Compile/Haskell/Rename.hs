@@ -112,7 +112,11 @@ exprRenameTests =
         "do, multi"
         [|do x; y|]
         [|do y; y|],
-      sameExpr "do, x bound" [|do x <- y; x|]
+      sameExpr "do, x bound" [|do x <- y; x|],
+      expr
+        "sig"
+        [|x :: Int|]
+        [|y :: Int|]
     ]
   where
     sameExpr testName original =

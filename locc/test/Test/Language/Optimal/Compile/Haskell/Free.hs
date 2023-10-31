@@ -52,7 +52,8 @@ exprFreeVarTests =
       expr "case, guarded" [|case x of _ | Just y <- z -> y|] ["x", "z"],
       expr "do, singleton" [|do x|] ["x"],
       expr "do, multi" [|do x; y|] ["x", "y"],
-      expr "do, bind" [|do x <- y; x|] ["y"]
+      expr "do, bind" [|do x <- y; x|] ["y"],
+      expr "sig" [|x :: Int|] ["x"]
     ]
   where
     expr testName e expectedFrees =
