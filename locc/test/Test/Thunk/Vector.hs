@@ -54,7 +54,11 @@ mapSample f sample = {
 |]
 
 index :: Thunked IO (Vector IO Int) -> Int -> IO Int
-index vec idx = vIndexVal vec idx >>= force
+index vecThunk idx =
+  do
+    vec <- force vecThunk
+    valThunk <- vIndex vec idx
+    force valThunk
 
 --------------------------------------------------------------------------------
 
