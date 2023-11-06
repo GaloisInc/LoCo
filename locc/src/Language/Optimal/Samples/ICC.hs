@@ -27,13 +27,22 @@ last n Region {..}
   | rEnd - n >= rBegin = pure (Region (rEnd - n) rEnd)
   | otherwise = liftIO (fail "not big enough")
 
+rLength :: Region -> Int
+rLength Region {..} = rEnd - rBegin
+
 between :: Int -> Int -> Region
 between begin end = Region {rBegin = begin, rEnd = end}
 
 get :: Region -> [a] -> [a]
 get Region {..} = drop rBegin . take rEnd
 
---------------------------------------------------------------------------------
+-- | Fallible `get`
+get' :: MonadIO m => Region -> [a] -> m [a]
+get' region xs =
+  let zs = get region xs
+   in if length zs == rLength region
+        then pure zs
+        else liftIO (fail "bad length")
 
 parseInt :: [Word8] -> Region -> Int
 parseInt src region =
@@ -73,7 +82,7 @@ parseHeader src region = {
 
 parseEntry : Source -> Region -> Entry
 parseEntry src region = {
-  eBytes = <| pure (get region src) |>
+  eBytes = <| get' region src |>
 }
 
 parseICC : Source -> ICC
@@ -119,7 +128,15 @@ iccEntry icc idx = {
 -- Entry 0:
 -- - Bytes: [42]
 toyICC :: Source
-toyICC = [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 12, 42]
+toyICC = tableLen <> header <> entry
+  where
+    tableLen = [0, 0, 0, 1]
+
+    header = entryLen <> entryOffset
+    entryLen = [0, 0, 0, 1]
+    entryOffset = [0, 0, 0, 12]
+
+    entry = [42]
 
 debugHeader :: MonadIO m => Header m -> m ()
 debugHeader Header {..} =
