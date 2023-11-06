@@ -46,8 +46,8 @@ parseInt src region =
 parseHeader :: MonadIO m => Source -> Region -> m (Header m)
 parseEntry :: MonadIO m => Source -> Region -> m (Entry m)
 parseICC :: MonadIO m => Source -> m (ICC m)
-iccHeader :: MonadIO m => Source -> Int -> m (Header m)
-iccEntry :: MonadIO m => Source -> Int -> m (Entry m)
+iccHeader :: MonadIO m => ICC m -> Int -> m (Header m)
+iccEntry :: MonadIO m => ICC m -> Int -> m (Entry m)
 
 type Source = [Word8]
 
@@ -95,18 +95,16 @@ entryFromHeader hdr src = {
   eBytes = entry.eBytes,
 }
 
-iccHeader : Source -> Int -> Header
-iccHeader src idx = {
-  icc = module parseICC src,
+iccHeader : ICC -> Int -> Header
+iccHeader icc idx = {
   headers = icc.iccHeaders,
   header = index headers idx,
   hLen = header.hLen,
   hOff = header.hOff
 }
 
-iccEntry : Source -> Int -> Entry
-iccEntry src idx = {
-  icc = module parseICC src,
+iccEntry : ICC -> Int -> Entry
+iccEntry icc idx = {
   entries = icc.iccEntries,
   entry = index entries idx,
   eBytes = entry.eBytes,
