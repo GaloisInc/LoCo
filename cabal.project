@@ -1,3 +1,25 @@
 packages: ./locc/
           ./pear/
+          ./daedalus/
+          ./daedalus/daedalus-utils/
+          ./daedalus/daedalus-core/
+          ./daedalus/daedalus-vm/
+          ./daedalus/daedalus-value/
+          ./daedalus/rts-hs/
+          ./daedalus/rts-hs-data/
+          ./daedalus/rts-vm-hs/
+          ./daedalus/formats/pdf/old/cos/
+          ./daedalus/formats/pdf/old/driver/
+          ./daedalus/formats/pdf/arlington-pdf-model/
+          ./daedalus/formats/icc/
+          ./daedalus/formats/nitf/haskell/
+          ./daedalus/formats/vlq_128/atto/
+          ./daedalus/formats/vlq_128/ddl-hs/
+          ./daedalus/formats/bson/ddl-hs/
+          ./daedalus/formats/bson/hs
+          ./daedalus/formats/s-exp/ddl-hs/
+          ./daedalus/formats/s-exp/happy
+          ./daedalus/talos/
+          ./daedalus/daedalus-language-server/
+          ./daedalus/standalone/cabal-pack/
           

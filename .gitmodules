@@ -1,0 +1,3 @@
+[submodule "daedalus"]
+	path = daedalus
+	url = git@github.com:GaloisInc/daedalus.git
