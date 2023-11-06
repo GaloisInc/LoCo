@@ -19,10 +19,14 @@ import Language.Optimal.Syntax qualified as Optimal
 import Language.Optimal.Typecheck (checkArity, expandType)
 import Language.Optimal.Util (Named (name))
 
-compileOptimalModuleDecls :: (Free e, Haskell e, Rename e) => Env Optimal.Type -> [ModuleDecl e] -> Q [Dec]
+-- XXX: it's possible to specialize all of this to `Exp`, or to remove the
+-- `Free`/`Rename` constraints, but is it appropriate?
+
+compileOptimalModuleDecls :: (Haskell e) => Env Optimal.Type -> [ModuleDecl e] -> Q [Dec]
 compileOptimalModuleDecls tyEnv modDecls =
   do
-    let elaboratedModDecls = map elaborate modDecls
+    hsModDecls <- mapM (sequenceModuleDecl . fmap asExp) modDecls
+    let elaboratedModDecls = map elaborate hsModDecls
     case mapM_ checkArity elaboratedModDecls of
       Left err -> fail err
       Right () -> pure ()

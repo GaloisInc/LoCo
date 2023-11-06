@@ -1,3 +1,6 @@
+{-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE DeriveFunctor #-}
+
 {-# HLINT ignore "Use newtype instead of data" #-}
 
 module Language.Optimal.Syntax where
@@ -18,7 +21,13 @@ data ModuleDecl e = ModuleDecl
     modParams :: [Symbol],
     modEnv :: Env (ModuleBinding e)
   }
-  deriving (Eq, Show)
+  deriving (Eq, Functor, Show)
+
+sequenceModuleDecl :: Applicative f => ModuleDecl (f e) -> f (ModuleDecl e)
+sequenceModuleDecl ModuleDecl {..} =
+  do
+    modEnv' <- traverse sequenceModuleBinding modEnv
+    pure ModuleDecl {modEnv = modEnv', ..}
 
 data ModuleBinding e
   = Expression e
@@ -36,7 +45,18 @@ data ModuleBinding e
       -- ^ module name
       Symbol
       -- ^ field name
-  deriving (Eq, Show)
+  deriving (Eq, Functor, Show)
+
+sequenceModuleBinding :: Applicative f => ModuleBinding (f a) -> f (ModuleBinding a)
+sequenceModuleBinding binding =
+  case binding of
+    Expression e -> Expression <$> e
+    VectorReplicate s e -> VectorReplicate s <$> e
+    VectorGenerate s e -> VectorGenerate s <$> e
+    VectorMap s e -> VectorMap s <$> e
+    VectorIndex s1 s2 -> pure (VectorIndex s1 s2)
+    ModuleIntro mdl args -> pure (ModuleIntro mdl args)
+    ModuleIndex mdl field -> pure (ModuleIndex mdl field)
 
 data TypeDecl = TypeDecl
   { tdName :: Symbol,
