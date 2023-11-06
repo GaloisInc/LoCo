@@ -32,6 +32,7 @@ library
         Language.Optimal.Parse
         Language.Optimal.Quote
         Language.Optimal.Samples
+        Language.Optimal.Samples.Daedalus
         Language.Optimal.Samples.ICC
         Language.Optimal.Samples.Nested
         Language.Optimal.Samples.Parameterized
@@ -62,6 +63,11 @@ library
         
     build-depends:
         base ^>=4.16.4.0,
+        daedalus,
+        icc-tools,
+        rts-hs,
+        rts-hs-data,
+        bytestring ^>=0.11.4.0,
         containers ^>=0.6.4.1,
         fgl ^>=5.7.0.3,
         hashable ^>=1.4.2.0,
