@@ -2,6 +2,7 @@ module Thunk.RefVal where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.IORef
+import Text.Printf (printf)
 
 data ThunkVal m a = Value a | Delay (m a)
 
@@ -79,3 +80,12 @@ join (Thunk ref) =
     case tVal of
       Value imm -> pure imm
       Delay action -> action
+
+debug :: (MonadIO m, Show a) => Thunked m a -> m ()
+debug (Thunk ref) =
+  liftIO $
+    do
+      tv <- readIORef ref
+      case tv of
+        Value v -> printf "Value (%s)\n" (show v)
+        Delay _ -> printf "Delay <action>\n"
