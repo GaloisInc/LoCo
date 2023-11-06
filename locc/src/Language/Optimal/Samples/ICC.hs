@@ -48,6 +48,7 @@ parseEntry :: MonadIO m => Source -> Region -> m (Entry m)
 parseICC :: MonadIO m => Source -> m (ICC m)
 iccHeader :: MonadIO m => ICC m -> Int -> m (Header m)
 iccEntry :: MonadIO m => ICC m -> Int -> m (Entry m)
+entryFromHeader :: MonadIO m => Header m -> Source -> m (Entry m)
 
 type Source = [Word8]
 
