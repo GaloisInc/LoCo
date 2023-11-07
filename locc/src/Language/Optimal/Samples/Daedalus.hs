@@ -8,14 +8,12 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Daedalus.RTS.Input (Input, newInput)
 import Daedalus.RTS.Vector (Vector)
 import Data.ByteString (ByteString)
-import Data.ByteString qualified as BS
 import Data.List.NonEmpty qualified as NE
 import ICC
 import Language.Optimal.Quote (optimal)
 import RTS.ParseError (ErrorStyle (MultiError), HasSourcePaths)
 import RTS.Parser (ParserG, runParser)
 import RTS.ParserAPI (BasicParser (pPeek), ResultG (..))
-import System.IO.Unsafe (unsafePerformIO)
 import Thunk.RefVal
 
 mkICC :: MonadIO m => ByteString -> m (OptimalICC m)
