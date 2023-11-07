@@ -60,6 +60,7 @@ compileModuleBindings modBinds orderedModBinds =
     compileBinding binding =
       case binding of
         Expression expr -> exprIntro modBinds expr
+        Value expr -> valIntro modBinds expr
         VectorReplicate len fill -> vecReplicate modBinds len fill
         VectorGenerate len fill -> vecGenerate modBinds len fill
         VectorIndex vec idx -> vecIndex modBinds vec idx
@@ -100,6 +101,12 @@ constructModule fields tyName =
 exprIntro :: (Free e, Haskell e, Rename e) => Set Name -> e -> Q Exp
 exprIntro modBinds expr =
   [|delayAction $(forceThunks modBinds expr)|]
+
+valIntro :: (Free e, Haskell e, Rename e) => Set Name -> e -> Q Exp
+valIntro modBinds expr =
+  do
+    thExpr <- asExp expr
+    exprIntro modBinds (AppE (VarE "pure") thExpr)
 
 -- | Create a version of the expression that evaluates itself in a context in
 -- which all its variables that refer to thunks have been forced

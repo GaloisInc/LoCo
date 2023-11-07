@@ -31,6 +31,7 @@ sequenceModuleDecl ModuleDecl {..} =
 
 data ModuleBinding e
   = Expression e
+  | Value e
   | VectorReplicate Symbol e -- vector introduction
   | VectorGenerate Symbol e -- vector introduction
   | VectorMap Symbol e -- vector transformation
@@ -51,6 +52,7 @@ sequenceModuleBinding :: Applicative f => ModuleBinding (f a) -> f (ModuleBindin
 sequenceModuleBinding binding =
   case binding of
     Expression e -> Expression <$> e
+    Value e -> Value <$> e
     VectorReplicate s e -> VectorReplicate s <$> e
     VectorGenerate s e -> VectorGenerate s <$> e
     VectorMap s e -> VectorMap s <$> e
@@ -101,6 +103,7 @@ bindingThunks :: Free e => Set Name -> ModuleBinding e -> Set Name
 bindingThunks modBinds binding =
   case binding of
     Expression e -> go e
+    Value e -> go e
     VectorReplicate len fill -> go (name len) <> go fill
     VectorGenerate len fill -> go (name len) <> go fill
     VectorMap vec transform -> go (name vec) <> go transform

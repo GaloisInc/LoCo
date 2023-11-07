@@ -85,19 +85,21 @@ exprTests :: TestTree
 exprTests =
   testGroup
     "expressions"
-    [ testSuccess "literal" "<| 3 |>" [e|3|],
+    [ testSuccess "literal" "<| 3 |>" (Expression <$> [e|3|]),
       -- This fails because it wants `Just` to parse as qualified (GHC.Maybe.Just)...
       -- testSuccess "application" "<| Just 1 |>" [e|Just 1|],
-      testFailure "unterminated" "<| 3"
+      testFailure "unterminated" "<| 3",
+      testSuccess "literal w/ pure sugar" "{| 3 |}" (Value <$> [e|3|]),
+      testFailure "unterminated w/ pure sugar" "{| "
     ]
   where
     testSuccess name source expr =
       testCase name $
         do
           expr' <- runQ expr
-          testParseSuccess parseValExpr source expr'
+          testParseSuccess parseOptimalModuleExpr source expr'
     testFailure name source =
-      testCase name (testParseFailure parseValExpr source)
+      testCase name (testParseFailure parseOptimalModuleExpr source)
 
 modTypeTests :: TestTree
 modTypeTests =

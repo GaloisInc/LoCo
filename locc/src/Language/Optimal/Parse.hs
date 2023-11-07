@@ -75,6 +75,7 @@ parseOptimalModuleExpr :: Parser e (ModuleBinding e)
 parseOptimalModuleExpr =
   choice
     [ Expression <$> parseValExpr,
+      Value <$> parsePureExpr,
       uncurry VectorReplicate <$> parseVecReplicate,
       uncurry VectorGenerate <$> parseVecGenerate,
       uncurry VectorMap <$> parseVecMap,
@@ -161,6 +162,18 @@ parseValExpr =
       Right expr -> pure expr
   where
     (left, right) = ("<|", "|>")
+
+parsePureExpr :: Parser e e
+parsePureExpr =
+  do
+    ignore (chunk left)
+    str <- manyTill anySingle (chunk right)
+    parseE <- ask
+    case parseE str of
+      Left err -> error $ "parse error: " <> err
+      Right expr -> pure expr
+  where
+    (left, right) = ("{|", "|}")
 
 -- | "replicate i <| e |>"
 parseVecReplicate :: Parser e (Symbol, e)
