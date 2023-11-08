@@ -61,7 +61,7 @@ library
     build-depends:
         base ^>=4.16.4.0,
         containers ^>=0.6.4.1,
-        locc,
+        optimal,
         QuickCheck,
         generic-arbitrary,
         transformers
