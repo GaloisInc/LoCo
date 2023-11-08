@@ -11,7 +11,6 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Language.Haskell.TH (Exp, Name)
-import Language.LoCo.Toposort (topoSortPossibly)
 import Language.Optimal.Compile.Haskell.Free (Free (..))
 import Language.Optimal.Util
 

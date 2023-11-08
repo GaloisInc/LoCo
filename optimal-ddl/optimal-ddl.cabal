@@ -29,7 +29,7 @@ library
         
         daedalus,
         icc-tools,
-        locc,
+        optimal,
         rts-hs,
         rts-hs-data,
 

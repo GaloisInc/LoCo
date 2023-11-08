@@ -7,16 +7,16 @@
 module Language.Optimal.Parse where
 
 import Control.Applicative (Alternative)
-import Control.Monad (MonadPlus)
+import Control.Monad (MonadPlus, void)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
-import Data.Char (isAlphaNum, isLower, isUpper)
+import Data.Char (isAlphaNum, isLower, isSpace, isUpper)
 import Data.Either (partitionEithers)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Void (Void)
-import Language.LoCoEssential.Essence ()
-import Language.LoCoEssential.SimpleExpr.Parse (braced, ignore, ws)
+-- import Language.LoCoEssential.Essence ()
+-- import Language.LoCoEssential.SimpleExpr.Parse (braced, ignore, ws)
 import Language.Optimal.Syntax
 import Text.Megaparsec hiding (runParser)
 import Text.Megaparsec qualified as Megaparsec
@@ -282,3 +282,12 @@ parseTyName =
     pure (Text.pack (c : cs))
   where
     validTyChar c = isAlphaNum c || c == '_'
+
+braced :: MonadParsec error Text m => m a -> m a
+braced p = between (ignore (single '{')) (ignore (single '}')) p <* ws
+
+ws :: MonadParsec error Text m => m ()
+ws = void (many (satisfy isSpace))
+
+ignore :: MonadParsec error Text m => m a -> m ()
+ignore p = void p >> ws

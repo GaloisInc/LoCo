@@ -1,5 +1,5 @@
 cabal-version:      2.4
-name:               locc
+name:               optimal
 version:            0.1.0.0
 author:             Sam Cowger
 maintainer:         sam@galois.com
@@ -22,19 +22,30 @@ library
     import: common
 
     exposed-modules:
-        Language.LoCoEssential.Driver
-        Language.LoCoEssential.Essence
-        Language.LoCoEssential.Interp.Lazy
-        Language.LoCoEssential.Interp.Trad
-        Language.LoCoEssential.SimpleExpr.Expr
-        Language.LoCoEssential.SimpleExpr.Parse
-        Language.LoCoEssential.ParsingExpr.Expr
-        Language.LoCoEssential.ParsingExpr.Parse
-        Language.LoCoEssential.Parse
-        Language.LoCoEssential.Samples
-        Language.LoCoEssential.Thunk
+        Language.Optimal.Collection
+        Language.Optimal.Compile
+        Language.Optimal.Compile.Haskell.CollectBindings
+        Language.Optimal.Compile.Haskell.Free
+        Language.Optimal.Compile.Haskell.TH
+        Language.Optimal.Compile.Haskell.Rename
+        Language.Optimal.Compile.Haskell.RenameFree
+        Language.Optimal.Parse
+        Language.Optimal.Quote
+        Language.Optimal.Samples
+        Language.Optimal.Samples.Doc
+        Language.Optimal.Samples.ICC
+        Language.Optimal.Samples.Nested
+        Language.Optimal.Samples.Parameterized
+        Language.Optimal.Samples.Vector
+        Language.Optimal.Samples2
+        Language.Optimal.Syntax
+        Language.Optimal.Typecheck
+        Language.Optimal.Util
 
-        Language.LoCo.Toposort
+        Thunk.IORef
+        Thunk.IORefVal
+        Thunk.RefVal
+        Thunk.Vector
         
     build-depends:
         base ^>=4.16.4.0,
@@ -54,7 +65,7 @@ library
 
     hs-source-dirs: src
 
-test-suite locc-test
+test-suite optimal-test
     import: common
 
     type: exitcode-stdio-1.0
@@ -62,7 +73,13 @@ test-suite locc-test
     main-is: Main.hs
 
     other-modules:
-        Test.Language.LoCoEssential.Essence
+        Test.Language.Optimal.Compile
+        Test.Language.Optimal.Compile.Haskell.Free
+        Test.Language.Optimal.Compile.Haskell.Rename
+        Test.Language.Optimal.Parse
+        Test.Language.Optimal.Typecheck
+
+        Test.Thunk.Vector
 
         Util
 
@@ -71,7 +88,7 @@ test-suite locc-test
 
     build-depends:
         base ^>=4.16.4.0,
-        locc,
+        optimal,
         containers ^>=0.6.4.1,
         haskell-src-meta ^>=0.8.12,
         QuickCheck ^>=2.14.2,
