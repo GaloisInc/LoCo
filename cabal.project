@@ -1,5 +1,6 @@
 packages: ./locc/
           ./pear/
+          ./optimal-ddl/
           ./daedalus/
           ./daedalus/daedalus-utils/
           ./daedalus/daedalus-core/
