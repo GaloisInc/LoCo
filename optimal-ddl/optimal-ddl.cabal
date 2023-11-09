@@ -23,6 +23,7 @@ library
 
     exposed-modules:
         Language.Optimal.Samples.Daedalus
+        Language.Optimal.Samples.Daedalus.Util
         
     build-depends:
         base ^>=4.16.4.0,
