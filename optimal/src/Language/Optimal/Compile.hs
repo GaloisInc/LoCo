@@ -170,26 +170,26 @@ vecReplicate :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Ex
 vecReplicate modBinds len fill =
   do
     expr <- [|vReplicate $(varE (name len)) $(asExp fill)|]
-    forceThunks modBinds expr
+    exprIntro modBinds expr
 
 vecGenerate :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
 vecGenerate modBinds len fill =
   do
     expr <- [|vGenerate $(varE (name len)) $(asExp fill)|]
-    forceThunks modBinds expr
+    exprIntro modBinds expr
 
 -- | The result has type m (Thunked m a)
 vecIndex :: Set Name -> Symbol -> Symbol -> Q Exp
 vecIndex modBinds vec idx =
   do
     expr <- [|vIndex $(varE (name vec)) $(varE (name idx))|]
-    forceThunks modBinds expr
+    exprIntro modBinds expr
 
 vecMap :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
 vecMap modBinds vec fn =
   do
     expr <- [|vMap $(asExp fn) $(varE (name vec))|]
-    forceThunks modBinds expr
+    exprIntro modBinds expr
 
 --------------------------------------------------------------------------------
 
