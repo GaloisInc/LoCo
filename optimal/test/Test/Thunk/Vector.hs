@@ -57,8 +57,7 @@ index :: Thunked IO (Vector IO Int) -> Int -> IO Int
 index vecThunk idx =
   do
     vec <- force vecThunk
-    valThunk <- vIndex vec idx
-    force valThunk
+    vIndex vec idx
 
 --------------------------------------------------------------------------------
 
