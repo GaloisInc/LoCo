@@ -43,8 +43,6 @@ type TagTable = DDL.Vector Tag
 
 type UInt32 = UInt 32
 
--- could be nice to make `generate` accept anything `Integral`
-
 instance SizeType n => Num (UInt n) where
   (+) = add
   (-) = sub
@@ -56,6 +54,12 @@ instance SizeType n => Num (UInt n) where
 
 inputSlice :: UInt 64 -> UInt 64 -> Input -> Input
 inputSlice begin end input = inputTake (end - begin) (inputDrop begin input)
+
+-- Paradigm: Optimal bindings are responsible for crafting input slices
+-- (analagous to the "regions" we've been considering in, e.g., PEAR), using
+-- input-manipulation functionality provided by Daedalus, which are then passed
+-- to `runDaedalus`, which lifts Daedalus parsing into a monad suitable for use
+-- in Optimal.
 
 [optimal|
 type OptimalICC = { profileHeader : ProfileHeader, tagTable : OptimalTagTable }
@@ -70,6 +74,7 @@ mkOptimalICC source = {
   tagTableInput = {| inputDrop 128 origInput |},
   tagTable = module mkOptimalTagTable tagTableInput,
 }
+
 
 type OptimalTagTable = { ttLen : UInt32, ttElems : [OptimalTag] }
 
