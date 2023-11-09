@@ -7,7 +7,6 @@
 module Language.Optimal.Samples.Daedalus where
 
 import Control.Monad.IO.Class (MonadIO (..))
-import Daedalus (pBEUInt32)
 import Daedalus.RTS.Numeric qualified as DDL
 import Daedalus.RTS.Vector qualified as DDL
 import Data.ByteString (ByteString)
@@ -20,6 +19,7 @@ import Language.Optimal.Samples.Daedalus.Util
     inputSlice,
     inputTake,
     newInput,
+    pBEUInt32,
     runDaedalus,
   )
 import System.IO.Unsafe (unsafePerformIO)
