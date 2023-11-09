@@ -8,22 +8,34 @@ module Language.Optimal.Samples.Daedalus where
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Daedalus (pBEUInt32)
-import Daedalus.RTS.Convert (convert)
-import Daedalus.RTS.Input (Input, inputDrop, inputTake, newInput)
-import Daedalus.RTS.Numeric (SizeType)
+import Daedalus.RTS.Input
+  ( Input,
+    inputDrop,
+    inputTake,
+    newInput,
+  )
+import Daedalus.RTS.Numeric
+  ( Arith (add, div, lit, mul, sub),
+    Numeric (mod),
+    SizeType,
+    UInt,
+    fromUInt,
+    toUInt,
+  )
 import Daedalus.RTS.Vector qualified as DDL
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.List.NonEmpty qualified as NE
+import Data.Ratio ((%))
 import ICC
 import Language.Optimal.Quote (optimal)
-import RTS (Arith (..), UInt, fromUInt, lit)
 import RTS.ParseError (ErrorStyle (MultiError), HasSourcePaths)
 import RTS.Parser (ParserG, runParser)
 import RTS.ParserAPI (ResultG (..))
 import System.IO.Unsafe (unsafePerformIO)
 import Thunk.RefVal
 import Thunk.Vector
+import Prelude hiding (div, mod)
 
 -- Now that I've done this, what about something a little different?
 --
@@ -51,6 +63,17 @@ instance SizeType n => Num (UInt n) where
   signum 0 = 0
   signum _ = 1
   fromInteger = lit
+
+instance SizeType n => Enum (UInt n) where
+  toEnum = toUInt . fromIntegral
+  fromEnum = fromIntegral . fromUInt
+
+instance SizeType n => Real (UInt n) where
+  toRational u = toInteger u % 1
+
+instance SizeType n => Integral (UInt n) where
+  toInteger = fromIntegral . fromUInt
+  quotRem numerator denominator = (numerator `div` denominator, numerator `mod` denominator)
 
 inputSlice :: UInt 64 -> UInt 64 -> Input -> Input
 inputSlice begin end input = inputTake (end - begin) (inputDrop begin input)
@@ -83,7 +106,7 @@ mkOptimalTagTable input = {
   ttLenInput = {| inputTake 4 input |},
   ttLen = <| parseU32 ttLenInput |>,
 
-  ttLenInt = {| fromIntegral (fromUInt ttLen) |},
+  ttLenInt = {| fromIntegral ttLen |},
   ttElemsInput = {| inputDrop 4 input |},
   ttElems = generate ttLenInt <| \i -> mkOptimalTag i ttElemsInput |>,
 }
@@ -109,8 +132,8 @@ mkOptimalTag idx input = {
 
   -- Our `input` elides the 132 bytes that comprise the ProfileHeader and tag
   -- table length, so we adjust our offsets accordingly
-  eElemBegin = {| convert eOffset - 132 |},
-  eElemEnd = {| eElemBegin + convert eSize |},
+  eElemBegin = {| fromIntegral eOffset - 132 |},
+  eElemEnd = {| eElemBegin + fromIntegral eSize |},
   eElemInput = {| inputSlice eElemBegin eElemEnd input |},
   eElem = <| parseTag eSig eElemInput |>,
 }
