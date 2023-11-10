@@ -72,9 +72,8 @@ mkOptimalTagTable input = {
   ttLenInput = {| inputTake 4 input |},
   ttLen = <| parseU32 ttLenInput |>,
 
-  ttLenInt = {| fromIntegral ttLen |},
   ttElemsInput = {| inputDrop 4 input |},
-  ttElems = generate ttLenInt <| \i -> mkOptimalTag i ttElemsInput |>,
+  ttElems = generate ttLen <| \i -> mkOptimalTag i ttElemsInput |>,
 }
 
 
