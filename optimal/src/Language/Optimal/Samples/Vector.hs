@@ -20,13 +20,16 @@ mkChar = liftIO (putStrLn "creating element") >> pure 'a'
 mkChar' :: Int -> IO Char
 mkChar' idx = liftIO (putStrLn ("creating " <> show idx <> " element") >> pure (toEnum idx))
 
+sampleLength :: Applicative f => f Int
+sampleLength = pure 5
+
 [optimal|
 type Str = { chars : [Char] }
 
 -- Replication from a thunked length
 replicateStrThunked : Str
 replicateStrThunked = {
-  len = <| pure 5 |>,
+  len = <| sampleLength |>,
   chars = replicate len <| mkChar |>
 }
 
@@ -39,7 +42,7 @@ replicateStrPure len = {
 -- Generation from a thunked length
 generateStrThunked : Str
 generateStrThunked = {
-  len = <| pure 5 |>,
+  len = <| sampleLength |>,
   chars = generate len <| mkChar' |>
 }
 
@@ -54,7 +57,7 @@ type Chr = { c : Char }
 -- Indexing from a thunked index
 indexStrThunked : Chr
 indexStrThunked = {
-  len = <| pure 5 |>,
+  len = <| sampleLength |>,
   vs = replicate len <| mkChar |>,
   idx = <| pure 4 |>,
   c = index vs idx

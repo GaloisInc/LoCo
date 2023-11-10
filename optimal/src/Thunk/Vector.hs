@@ -14,16 +14,16 @@ newtype Vector m a = Vector {vecContent :: V.Vector (Thunked m a)}
 instance Show (Vector m a) where
   show Vector {..} = printf "V[%i]" (length vecContent)
 
-vReplicate :: MonadIO m => Int -> m a -> m (Vector m a)
+vReplicate :: (Integral len, MonadIO m) => len -> m a -> m (Vector m a)
 vReplicate vecLen fillAction =
   do
-    vecContent <- V.replicateM vecLen (delayAction fillAction)
+    vecContent <- V.replicateM (fromIntegral vecLen) (delayAction fillAction)
     pure Vector {..}
 
-vGenerate :: MonadIO m => Int -> (Int -> m a) -> m (Vector m a)
+vGenerate :: (Integral len, MonadIO m) => len -> (Int -> m a) -> m (Vector m a)
 vGenerate vecLen fillAction =
   do
-    vecContent <- V.generateM vecLen (delayAction . fillAction)
+    vecContent <- V.generateM (fromIntegral vecLen) (delayAction . fillAction)
     pure Vector {..}
 
 -------------------------------------------------------------------------------
