@@ -36,6 +36,7 @@ library
         Language.Optimal.Samples.ICC
         Language.Optimal.Samples.Nested
         Language.Optimal.Samples.Parameterized
+        Language.Optimal.Samples.Tuple
         Language.Optimal.Samples.Vector
         Language.Optimal.Samples2
         Language.Optimal.Syntax
