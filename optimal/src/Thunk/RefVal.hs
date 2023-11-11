@@ -20,6 +20,13 @@ delayAction action =
     ref <- liftIO (newIORef (Delay action))
     pure (Thunk ref)
 
+delayTuple :: MonadIO m => m (a, b) -> m (Thunked m a, Thunked m b)
+delayTuple tupleAction =
+  do
+    refFst <- liftIO (newIORef (Delay (fst <$> tupleAction)))
+    refSnd <- liftIO (newIORef (Delay (snd <$> tupleAction)))
+    pure (Thunk refFst, Thunk refSnd)
+
 force :: MonadIO m => Thunked m a -> m a
 force (Thunk ref) =
   do

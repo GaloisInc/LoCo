@@ -37,8 +37,8 @@ compileOptimalModuleDecls tyEnv modDecls =
 compileOptimalModuleDecl :: (Free e, Haskell e, Rename e) => ModuleDecl e -> Q [Dec]
 compileOptimalModuleDecl ModuleDecl {..} =
   do
-    orderedModuleBindings <- sortModuleBindings modEnv'
-    assignments <- compileModuleBindings modBinds orderedModuleBindings
+    orderedModuleBindings <- sortModuleBindings modEnv
+    assignments <- compileModuleBindings modNameBinds orderedModuleBindings
     (modTyName, modTyEnv) <- recordResult modTy
     mkModule <- noBindS [|pure $(constructModule modTyEnv modTyName)|]
     let body = DoE Nothing (assignments <> [mkModule])
@@ -50,23 +50,30 @@ compileOptimalModuleDecl ModuleDecl {..} =
     pure [decl]
   where
     funName = name modName
-    modEnv' = Map.mapKeys name modEnv
-    modBinds = Map.keysSet modEnv'
+    modSymBinds = concatMap patSyms (Map.keys modEnv)
+    modNameBinds = Set.fromList (map name modSymBinds)
 
-compileModuleBindings :: (Free e, Haskell e, Rename e) => Set Name -> [(Name, ModuleBinding e)] -> Q [Stmt]
+compileModuleBindings :: (Free e, Haskell e, Rename e) => Set Name -> [(Pattern Name, ModuleBinding e)] -> Q [Stmt]
 compileModuleBindings modBinds orderedModBinds =
-  sequence [bindS (varP nm) (compileBinding binding) | (nm, binding) <- orderedModBinds]
+  sequence [bindS (mkPat p) (compileBinding p binding) | (p, binding) <- orderedModBinds]
   where
-    compileBinding binding =
-      case binding of
-        Expression expr -> exprIntro modBinds expr
-        Value expr -> valIntro modBinds expr
-        VectorReplicate len fill -> vecReplicate modBinds len fill
-        VectorGenerate len fill -> vecGenerate modBinds len fill
-        VectorIndex vec idx -> vecIndex modBinds vec idx
-        VectorMap vec fn -> vecMap modBinds vec fn
-        ModuleIntro m params -> modIntro modBinds m params
-        ModuleIndex m field -> modIndex modBinds m field
+    mkPat p =
+      case p of
+        Sym s -> varP s
+        Tup ss -> tupP (map varP ss)
+
+    compileBinding pat binding =
+      case (pat, binding) of
+        (Sym _, Expression expr) -> exprIntro modBinds expr
+        (Tup _, Expression expr) -> tupleIntro modBinds expr
+        (Tup _, _) -> fail "cannot bind a tuple to a non-expression"
+        (_, Value expr) -> valIntro modBinds expr
+        (_, VectorReplicate len fill) -> vecReplicate modBinds len fill
+        (_, VectorGenerate len fill) -> vecGenerate modBinds len fill
+        (_, VectorIndex vec idx) -> vecIndex modBinds vec idx
+        (_, VectorMap vec fn) -> vecMap modBinds vec fn
+        (_, ModuleIntro m params) -> modIntro modBinds m params
+        (_, ModuleIndex m field) -> modIndex modBinds m field
 
 recordResult :: MonadFail m => Optimal.Type -> m (Name, Env Optimal.Type)
 recordResult modTy =
@@ -101,6 +108,11 @@ constructModule fields tyName =
 exprIntro :: (Free e, Haskell e, Rename e) => Set Name -> e -> Q Exp
 exprIntro modBinds expr =
   [|delayAction $(forceThunks modBinds expr)|]
+
+-- | Result has type `m (Thunked m a, Thunked m b)`
+tupleIntro :: (Free e, Haskell e, Rename e) => Set Name -> e -> Q Exp
+tupleIntro modBinds expr =
+  [|delayTuple $(forceThunks modBinds expr)|]
 
 valIntro :: (Free e, Haskell e, Rename e) => Set Name -> e -> Q Exp
 valIntro modBinds expr =

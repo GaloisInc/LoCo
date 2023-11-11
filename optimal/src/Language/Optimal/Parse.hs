@@ -11,12 +11,11 @@ import Control.Monad (MonadPlus, void)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Data.Char (isAlphaNum, isLower, isSpace, isUpper)
 import Data.Either (partitionEithers)
+import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Void (Void)
--- import Language.LoCoEssential.Essence ()
--- import Language.LoCoEssential.SimpleExpr.Parse (braced, ignore, ws)
 import Language.Optimal.Syntax
 import Text.Megaparsec hiding (runParser)
 import Text.Megaparsec qualified as Megaparsec
@@ -59,7 +58,7 @@ parseOptimalModuleDecl =
 parseOptimalModuleTypeAscription :: Parser e (Symbol, Type)
 parseOptimalModuleTypeAscription = parseBinop parseVarName (single ':') parseOptimalType
 
-parseOptimalModuleBody :: Symbol -> Parser e ([Symbol], Env (ModuleBinding e))
+parseOptimalModuleBody :: Symbol -> Parser e ([Symbol], Map (Pattern Symbol) (ModuleBinding e))
 parseOptimalModuleBody modName =
   do
     ignore (chunk modName)
@@ -68,8 +67,8 @@ parseOptimalModuleBody modName =
     body <- parseOptimalModuleBindings
     pure (params, body)
 
-parseOptimalModuleBindings :: Parser e (Env (ModuleBinding e))
-parseOptimalModuleBindings = parseBindings (single '=') parseOptimalModuleExpr
+parseOptimalModuleBindings :: Parser e (Map (Pattern Symbol) (ModuleBinding e))
+parseOptimalModuleBindings = parseBindings parsePattern (single '=') parseOptimalModuleExpr
 
 parseOptimalModuleExpr :: Parser e (ModuleBinding e)
 parseOptimalModuleExpr =
@@ -137,7 +136,7 @@ parseOptimalType name = t >>= t'
     parenthesized = between (ignore (single '(')) (ignore (single ')'))
 
 parseOptimalRecordType :: Symbol -> Parser e (Env Type)
-parseOptimalRecordType name = parseBindings (single ':') (parseOptimalType name)
+parseOptimalRecordType name = parseBindings parseVarName (single ':') (parseOptimalType name)
 
 -------------------------------------------------------------------------------
 
@@ -236,13 +235,13 @@ parseModIndex =
 -- | Parse a curly-braced, comma-separated, non-empty set of "bindings",
 -- producing a mapping from symbols to expressions. Parsing is parametric over
 -- binding syntax ('=', e.g.) and expression syntax (e.g. `Exp`)
-parseBindings :: Parser e separator -> Parser e rhs -> Parser e (Env rhs)
-parseBindings parseOp parseRhs =
+parseBindings :: Ord lhs => Parser e lhs -> Parser e separator -> Parser e rhs -> Parser e (Map lhs rhs)
+parseBindings parseLhs parseOp parseRhs =
   do
     binds <- braced (binding `sepEndBy1` separator)
     pure (Map.fromList binds)
   where
-    binding = parseBinop parseVarName parseOp (const parseRhs)
+    binding = parseBinop parseLhs parseOp (const parseRhs)
     separator = single ',' >> ws
 
 parseBinop :: Parser e lhs -> Parser e op -> (lhs -> Parser e rhs) -> Parser e (lhs, rhs)
@@ -263,6 +262,13 @@ parseAscription lhs = parseBinop lhs (single ':')
 
 -------------------------------------------------------------------------------
 
+parsePattern :: MonadParsec error Text m => m (Pattern Symbol)
+parsePattern =
+  choice
+    [ Tup <$> parenthesized (sepBy1 parseVarName (ignore (single ','))),
+      Sym <$> parseVarName
+    ]
+
 parseVarName :: MonadParsec error Text m => m Symbol
 parseVarName =
   do
@@ -282,6 +288,9 @@ parseTyName =
     pure (Text.pack (c : cs))
   where
     validTyChar c = isAlphaNum c || c == '_'
+
+parenthesized :: MonadParsec error Text m => m a -> m a
+parenthesized p = between (ignore (single '(')) (ignore (single ')')) p <* ws
 
 braced :: MonadParsec error Text m => m a -> m a
 braced p = between (ignore (single '{')) (ignore (single '}')) p <* ws

@@ -1,16 +1,18 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# HLINT ignore "Use newtype instead of data" #-}
 
 module Language.Optimal.Syntax where
 
+import Data.List
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
-import Language.Haskell.TH (Exp, Name)
+import Language.Haskell.TH (Name)
 import Language.Optimal.Compile.Haskell.Free (Free (..))
 import Language.Optimal.Util
 
@@ -18,7 +20,7 @@ data ModuleDecl e = ModuleDecl
   { modTy :: Type,
     modName :: Symbol,
     modParams :: [Symbol],
-    modEnv :: Env (ModuleBinding e)
+    modEnv :: Map (Pattern Symbol) (ModuleBinding e)
   }
   deriving (Eq, Functor, Show)
 
@@ -59,6 +61,17 @@ sequenceModuleBinding binding =
     ModuleIntro mdl args -> pure (ModuleIntro mdl args)
     ModuleIndex mdl field -> pure (ModuleIndex mdl field)
 
+data Pattern s
+  = Sym s
+  | Tup [s] -- or [Pattern]
+  deriving (Eq, Functor, Ord, Show)
+
+patSyms :: Pattern s -> [s]
+patSyms pat =
+  case pat of
+    Sym s -> [s]
+    Tup ss -> ss
+
 data TypeDecl = TypeDecl
   { tdName :: Symbol,
     tdType :: Type
@@ -80,21 +93,23 @@ type Env a = Map Symbol a
 --------------------------------------------------------------------------------
 
 sortModuleBindings ::
-  (Free e, MonadFail m, Named n) =>
-  Map n (ModuleBinding e) ->
-  m [(Name, ModuleBinding e)]
+  (Free e, MonadFail m) =>
+  Map (Pattern Symbol) (ModuleBinding e) ->
+  m [(Pattern Name, ModuleBinding e)]
 sortModuleBindings modEnv =
   do
     let dependencies =
-          [ (var, deps)
-            | (var, binding) <- Map.toList modEnv',
+          [ (name <$> pat, map Sym deps)
+            | (pat, binding) <- Map.toList modEnv,
               let deps = Set.toList (bindingThunks modNames binding)
           ]
-    orderedNames <- reverse <$> topoSortPossibly dependencies
+    orderedNames <- reverse <$> topoSortPatterns dependencies
     pure [(n, modEnv' Map.! n) | n <- orderedNames]
   where
-    modEnv' = Map.mapKeys name modEnv
-    modNames = Map.keysSet modEnv'
+    modPats = Map.keys modEnv
+    modSyms = concatMap patSyms modPats
+    modNames = Set.fromList (map name modSyms)
+    modEnv' = Map.mapKeys (fmap name) modEnv
 
 -- | What variables are free in the binding but bound in the broader module
 -- context? These variables represent (and are typed as) thunks.
@@ -111,3 +126,16 @@ bindingThunks modBinds binding =
     ModuleIndex modThunk field -> go (name modThunk)
   where
     go x = freeVars x `Set.intersection` modBinds
+
+topoSortPatterns :: (MonadFail m, Eq n, Show n) => [(Pattern n, [Pattern n])] -> m [Pattern n]
+topoSortPatterns = topoSortPossibly refersTo
+  where
+    refersTo p1 p2 =
+      case (p1, p2) of
+        (Sym s1, Sym s2) -> s1 == s2
+        (Tup ss, Sym s) -> s `elem` ss
+        -- Not sure these can come up in practice - for `p2` to be a tuple would
+        -- mean we decided that a module binding depended on a tuple, but we
+        -- only ever expect to see `Sym` dependencies
+        (Sym _, Tup _) -> False
+        (Tup ss, Tup ss') -> not (null (ss `intersect` ss'))

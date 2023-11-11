@@ -10,7 +10,7 @@ import Data.Text (Text)
 import Language.Haskell.Meta (parseExp)
 import Language.Haskell.TH.Syntax
 import Language.Optimal.Parse
-import Language.Optimal.Syntax (ModuleBinding (..), Type (..))
+import Language.Optimal.Syntax (ModuleBinding (..), Type (..), Pattern (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 import Util (moduleName)
@@ -123,19 +123,19 @@ modBodyTests =
         "foo = { x = <| pure 3 |> }"
         "foo"
         mempty
-        [("x", Expression (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+        [(Sym "x", Expression (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
         "one parameter"
         "foo y = { x = <| pure y |> }"
         "foo"
         ["y"]
-        [("x", Expression (AppE (VarE (mkName "pure")) (VarE (mkName "y"))))],
+        [(Sym "x", Expression (AppE (VarE (mkName "pure")) (VarE (mkName "y"))))],
       testSuccess
         "multiple parameters"
         "foo y z = { x = <| pure y |> }"
         "foo"
         ["y", "z"]
-        [("x", Expression (AppE (VarE (mkName "pure")) (VarE (mkName "y"))))]
+        [(Sym "x", Expression (AppE (VarE (mkName "pure")) (VarE (mkName "y"))))]
     ]
   where
     testSuccess name source expectedName expectedParams expectedBinds =
@@ -148,37 +148,41 @@ modBindingTests =
     [ testSuccess
         "value binding"
         "{ x = <| pure 3 |> }"
-        [("x", Expression (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+        [(Sym "x", Expression (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+      testSuccess
+        "tuple binding"
+        "{ (x, y) = <| pure (3, 4) |> }"
+        [(Tup ["x", "y"], Expression (AppE (VarE (mkName "pure")) (TupE [Just (LitE (IntegerL 3)), Just (LitE (IntegerL 4))])))],
       testSuccess
         "vector replicate binding"
         "{ x = replicate l <| pure 3 |> }"
-        [("x", VectorReplicate "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+        [(Sym "x", VectorReplicate "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
         "vector generate binding"
         "{ x = generate l <| pure 3 |> }"
-        [("x", VectorGenerate "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+        [(Sym "x", VectorGenerate "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
         "multiple bindings"
         "{ x = <| pure 3 |>, y = replicate x <| pure 'a' |> }"
-        [ ("x", Expression (AppE (VarE (mkName "pure")) (LitE (IntegerL 3)))),
-          ("y", VectorReplicate "x" (AppE (VarE (mkName "pure")) (LitE (CharL 'a'))))
+        [ (Sym "x", Expression (AppE (VarE (mkName "pure")) (LitE (IntegerL 3)))),
+          (Sym "y", VectorReplicate "x" (AppE (VarE (mkName "pure")) (LitE (CharL 'a'))))
         ],
       testSuccess
         "vector index binding"
         "{ x = index xs i }"
-        [("x", VectorIndex "xs" "i")],
+        [(Sym "x", VectorIndex "xs" "i")],
       testSuccess
         "module intro, no args"
         "{ m = module foo }"
-        [("m", ModuleIntro "foo" mempty)],
+        [(Sym "m", ModuleIntro "foo" mempty)],
       testSuccess
         "module intro, args"
         "{ m = module foo x }"
-        [("m", ModuleIntro "foo" ["x"])],
+        [(Sym "m", ModuleIntro "foo" ["x"])],
       testSuccess
         "module index"
         "{ f = m.x }"
-        [("f", ModuleIndex "m" "x")],
+        [(Sym "f", ModuleIndex "m" "x")],
       testFailure "empty bindings" "{ }"
     ]
   where

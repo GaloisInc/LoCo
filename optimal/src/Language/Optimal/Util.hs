@@ -34,8 +34,8 @@ instance IsString Name where
 
 ---- topological sort --------------------------------------------------------
 
-topoSortPossibly :: forall a m. (MonadFail m, Show a, Eq a) => [(a, [a])] -> m [a]
-topoSortPossibly ns =
+topoSortPossibly :: forall a m. (MonadFail m, Show a, Eq a) => (a -> a -> Bool) -> [(a, [a])] -> m [a]
+topoSortPossibly refersTo ns =
   do
     let nms = map fst ns
     when (length (nub nms) /= length nms) $
@@ -44,7 +44,7 @@ topoSortPossibly ns =
     mapM_ failIfRefersToSelf ns
 
     let canMakeDest d =
-          case d `elemIndex` nms of
+          case findIndex (`refersTo` d) nms of
             Just i -> return i
             Nothing -> fail $ unwords ["reference to", show d, "is non-existent"]
         -- NB: zero-based
@@ -82,7 +82,7 @@ topoSortPossibly ns =
 
 topoSortPossibly' ::
   forall a. (Show a, Eq a) => [(a, [a])] -> Either String [a]
-topoSortPossibly' = topoSortPossibly
+topoSortPossibly' = topoSortPossibly (==)
 
 prop_test1 :: Bool
 prop_test1 = and tests1
