@@ -230,9 +230,9 @@ compileOptimalTypeDecl tyEnv m TypeDecl {..} =
   case ty of
     -- If we expanded to an Alias, we know it refers to a Haskell type, and so
     -- doesn't require a type synonym
-    Alias alias -> (: []) <$> tySynD (name tdName) [] (go ty)
+    Alias _alias -> (: []) <$> tySynD (name tdName) [] (go ty)
     -- Vectors require type parameters, so their declarations do too
-    List t -> (: []) <$> tySynD (name tdName) [PlainTV m ()] (go ty)
+    List _inner -> (: []) <$> tySynD (name tdName) [PlainTV m ()] (go ty)
     Tuple ts -> undefined
     Arrow t1 t2 -> undefined
     Rec nm fields -> compileOptimalRecordDecl tyEnv m (name nm) fields
@@ -260,7 +260,7 @@ compileOptimalType tyEnv m ty =
     List t -> appT (appT (conT "Vector") (varT m)) (go t)
     Tuple ts -> undefined
     Arrow t1 t2 -> undefined
-    Rec nm fields -> appT (conT (name nm)) (varT m)
+    Rec nm _fields -> appT (conT (name nm)) (varT m)
   where
     go = compileOptimalType tyEnv m
 

@@ -3,10 +3,13 @@
 
 module Language.Optimal.Samples.Parameterized where
 
+import Control.Monad.IO.Class (MonadIO)
+import Data.Word (Word64)
 import Language.Optimal.Quote (optimal)
 import Language.Optimal.Samples (facilePrimalityTest)
 import Thunk.RefVal (Thunked, delayAction, force)
-import Control.Monad.IO.Class (liftIO)
+
+bar :: MonadIO m => Word64 -> m (Bar m)
 
 [optimal|
 type Foo = { foo : Int }

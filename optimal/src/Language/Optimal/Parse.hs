@@ -133,7 +133,6 @@ parseOptimalType name = t >>= t'
     go = parseOptimalType name
 
     bracketed = between (ignore (single '[')) (ignore (single ']'))
-    parenthesized = between (ignore (single '(')) (ignore (single ')'))
 
 parseOptimalRecordType :: Symbol -> Parser e (Env Type)
 parseOptimalRecordType name = parseBindings parseVarName (single ':') (parseOptimalType name)

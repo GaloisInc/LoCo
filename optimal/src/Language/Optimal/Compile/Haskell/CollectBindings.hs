@@ -61,13 +61,13 @@ instance CollectBindings Stmt where
 decBindings :: Dec -> BindingVars
 decBindings dec =
   case dec of
-    ValD pat body _ -> patBindings pat
+    ValD pat _body _ -> patBindings pat
     _ -> unimplemented "decBindings" dec
 
 patBindings :: Pat -> BindingVars
 patBindings pat =
   case pat of
-    LitP l -> mempty
+    LitP _ -> mempty
     VarP n -> singleton n
     TupP ps -> foldMap patBindings ps
     UnboxedTupP ps -> foldMap patBindings ps
@@ -81,10 +81,10 @@ patBindings pat =
     BangP p -> patBindings p
     AsP n p -> insert n (patBindings p)
     WildP -> mempty
-    RecP recName fieldPats -> foldMap (\(n, p) -> patBindings p) fieldPats
+    RecP _recName fieldPats -> foldMap (\(_, p) -> patBindings p) fieldPats
     ListP ps -> foldMap patBindings ps
     SigP p _ -> patBindings p
-    ViewP e p -> patBindings p
+    ViewP _ p -> patBindings p
 
 guardBindings :: Guard -> BindingVars
 guardBindings guard =

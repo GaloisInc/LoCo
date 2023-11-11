@@ -9,7 +9,6 @@
 module Language.Optimal.Samples2 where
 
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Identity
 import Control.Monad.Trans.Except
 import Data.Word (Word64, Word8)
 
@@ -25,8 +24,10 @@ import Thunk.RefVal (Thunked, delayAction, force)
 data T = T Int
          deriving (Eq,Ord,Read,Show)
 
+f :: Applicative f => T -> f String
 f l1_a = case l1_a of T n -> pure (show n)
 
+m1 :: MonadIO m => m (LoCo1 m)
 [optimal|
 type LoCo1 = { l1_a : T, l1_b : String }
 
@@ -126,7 +127,7 @@ userCodeFoo1 :: IO Bool
 userCodeFoo1 =
   do
     x <- foo
-    b <- force (b x)
+    _b <- force (b x)
     a <- force (a x)
     return a
   -- MT: hmmm: sharing more than expected: 2nd call to userCode2 is fast.
@@ -159,20 +160,22 @@ m3_Hs = do
                         else throwE ["odd"]
          return (a,b)
 
+userCodeM3a :: MonadIO m => m (Either [String] (Int, Int))
 userCodeM3a = runExceptT $
   do
     m' <- m3
     a <- force (l3a m')
     -- b <- force (l3b m')
     c <- force (l3c m')
-    a2 <- force (l3a m')
+    _a2 <- force (l3a m')
     return (a,c)
 
+userCodeM3b :: MonadIO m => m (Either [String] (Int, Int))
 userCodeM3b = runExceptT $
   do
     m' <- m3
     a <- force (l3a m')
-    c <- force (l3c m')
+    _c <- force (l3c m')
     b <- force (l3b m')
     return (a,b)
 

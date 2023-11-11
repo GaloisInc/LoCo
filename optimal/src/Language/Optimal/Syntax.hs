@@ -122,8 +122,8 @@ bindingThunks modBinds binding =
     VectorGenerate len fill -> go (name len) <> go fill
     VectorMap vec transform -> go (name vec) <> go transform
     VectorIndex vec idx -> go (name vec) <> go (name idx)
-    ModuleIntro modName modArgs -> foldMap (go . name) modArgs
-    ModuleIndex modThunk field -> go (name modThunk)
+    ModuleIntro _modName modArgs -> foldMap (go . name) modArgs
+    ModuleIndex modThunk _field -> go (name modThunk)
   where
     go x = freeVars x `Set.intersection` modBinds
 

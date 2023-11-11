@@ -32,4 +32,4 @@ force :: Thunked a -> IO a
 force (Thunked ref) = ref >>= readIORef
 
 delay :: IO a -> Thunked a
-delay action = undefined
+delay _action = undefined

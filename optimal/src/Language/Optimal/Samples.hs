@@ -34,6 +34,7 @@ facilePrimalityTest n = and [n `mod` i /= 0 | i <- [2 .. n `div` 2]]
 --     b2 :: Thunked Bool
 --   }
 
+foo :: MonadIO m => m (Foo m)
 [optimal|
 type Foo = { a : Bool, b : Char }
 
@@ -67,8 +68,8 @@ userCode =
     f <- foo
     let bField :: Thunked IO Char
         bField = b f
-    bPure <- force bField
-    a <- force (a f)
+    _bPure <- force bField
+    _a <- force (a f)
     pure ()
 
 --------------------
@@ -98,6 +99,7 @@ takeMaybe len xs =
       | otherwise -> Nothing
     (z : zs) -> (z :) <$> takeMaybe (len - 1) zs
 
+icc :: MonadIO m => m (ICC m)
 [optimal|
 type ICC = { fileText : String, tableSize : Int, tableEntries : TableEntries }
 
@@ -107,8 +109,8 @@ icc = {
   tableSize = <| liftIO $ putStrLn "tableSize" >> pure (read (take 2 fileText)) |>,
   unusedField = <| liftIO $ putStrLn "unusedField" |>,
   tableEntries = <|
-let body = drop 2 fileText
-    chunks = chunk tableSize body
+let _body = drop 2 fileText
+    _chunks = chunk tableSize _body
 in  unusedField `seq` pure (TableEntries [])
 |>
   
