@@ -1,10 +1,10 @@
 # DRAFT
 
-# What is `Optimal(L)`?
+# Introduction
 
 `Optimal(L)` is an embedded DSL that allows for automated lazy evaluation and
 caching of expressions in a particular source language. It is written
-`Optimal(L)` to evoke a function application, with `Optimal` being the function
+`Optimal(L)` to suggest a function application, with `Optimal` being the function
 and `L` being the parameter. This is to illustrate that `Optimal` is parametric
 over the expression language, `L`, that it harnesses. In principle, `Optimal`
 can be instantiated with any number of expression languages, though at the
@@ -18,15 +18,18 @@ of the expression's result. In this way, `Optimal` has a semantics that is both
 lazy and ensures an "evaluated at most once" principle.
 
 
-# How do I use `Optimal(L)`?
+# Language Constructs
 
 `Optimal(L)` is embedded in Haskell. This is true regardless of the choice of
 `L` (`L`, recall, is also limited to being Haskell at the moment). Users of
 `Optimal` import the library and write their `Optimal` code in a quasiquoted
 block, using the `optimal` quoter.
 
-Within this quoter, users can declare types:
 
+## Types
+
+Within this quoter, users can declare types. The core type construct in
+`Optimal` is the "module":
 ```hs
 [optimal|
 type Foo = { x : Bool, y : Char }
@@ -34,17 +37,36 @@ type Foo = { x : Bool, y : Char }
 ```
 
 This says that a `Foo` is a "module" with fields `x` of type `Bool` and `y` of
-type `Char`. A module is like a struct: it is a collection of values accessible
-by their name.
+type `Char`. A module is like a struct, or a record: it is a collection of
+values accessible by identifiers. `Optimal` modules are more permissive than
+these constructs, though: what `Foo` *actually* promises is that any implementor
+exposes *at least* fields `x` and `y` of the specified types - implementors are
+free to bind arbitrarily more fields than that, which can aid in the computation
+of the exposed fields.
 
 Note that we have no definition in `Optimal` of `Bool` or `Char`. When
 encountering "unbound" types like this, `Optimal` will try to generate code that
 relies on a Haskell type with that name. Subsequent declarations referring to
 `Foo`, though, will use our declared type.
 
-TODO: type aliases
+Users can also declare type aliases:
+```hs
+[optimal|
+type Bar = Foo
+|]
+```
 
-TODO: lists
+`Optimal` also supports vector types, denoted as `[<typename>]`:
+```hs
+[optimal|
+type Bitvec = [Bool]
+|]
+```
+
+See below for more on vector semantics.
+
+
+## Modules
 
 With a module type declared, users can create actual modules of that type:
 
@@ -66,10 +88,8 @@ whether or not a large(-ish) number is prime, and the field named `y` with a
 computation depending on that primality test. (More on the mechanics of this
 reference to `x` below. TODO.) The content within the `<| ... |>` delimiters
 contains expressions in the language `L`, which is ordinary Haskell (which can
-refer transparently to values defined outside the scope of an `Optimal`
-quotation). Don't worry about the use of `pure` yet.
-
-TODO: worry about `pure`
+refer to values defined outside the scope of an `Optimal` quotation). See below
+for more detail on why these expressions use `pure`.
 
 We've written the module by declaring `x` before declaring `y`, but this is not
 necessary, even though `y` mentions `x`. A side effect of `Optimal`'s efforts to
@@ -78,7 +98,9 @@ automatically topologically reordered.
 
 TODO: well-typedness?
 
-This generates a few declarations:
+TODO: commutative monads?
+
+This generates a few functions:
 ```hs
 foo :: MonadIO m => m (Foo m)
 x :: MonadIO m => Foo m -> Thunked m Bool
@@ -86,11 +108,11 @@ y :: MonadIO m => Foo m -> Thunked m Char
 ```
 
 The Haskell type generated for `Foo` can be considered a variation on a built-in
-Haskell record type, with `foo` as its introducer and `x` and `y` as its
-eliminators. (Technically, `x` and `y` are not generated as functions, but
-appear as record accessors, so their signatures cannot be included in a file.
-TODO.) The extra monadic machinery and appearance of the `Thunked` type are
-indications of the special semantics that `Optimal` imposes on this declaration.
+Haskell record type, with `foo` as its constructor and `x` and `y` as its
+eliminators. (Technically, `x` and `y` are not generated as standalone
+functions, but rather as record accessors.) The extra monadic machinery and
+appearance of the `Thunked` type are indications of the special semantics that
+`Optimal` imposes on this declaration.
 
 Users need to know little about `Thunked` values, other than the type of their
 eliminator:
@@ -101,80 +123,116 @@ force :: MonadIO m => Thunked m a -> m a
 A `Thunked` value can be thought of as a suspended computation, and `force`
 evaluates that computation to yield its result. TODO it does more.
 
-With this in mind, we can write some client code for this module:
+
+## Client Code
+
+With this in mind, we can write some client code for this module, in `IO` for
+simplicity's sake:
 ```hs
 workWithFoo :: IO ()
 workWithFoo =
   do
     f <- foo
-    force (x f) >>= print
-    force (y f) >>= print
+
+    let xThunk :: Thunked m Bool
+        xThunk = x f
+        yThunk :: Thunked m Char
+        yThunk = y f
+        
+    force xThunk >>= print
+    force yThunk >>= print
 ```
 
-This introduces a `Foo` via `foo`, then applies `force` to each of its fields
-and display the results. This prints the following:
+This creates a `Foo` via `foo`, then applies `force` to each of its fields and
+display the results. This prints the following:
 ```hs
 True
 'T'
 ```
 
 
+# Evaluation
 
-Depending on the algorithm, the computation associated with `x` might be
-expensive, and in a regular program `x` would be a good candidate for
-`let`-binding, or some other strategy that effects sharing of its results
-without recomputing them. 
+So far, if you squint, using `Optimal` looks kinda like just using a language,
+with a bit more syntactic noise and evaluation overhead.
 
-Recall that `Optimal` has a lazy, evaluate-at-most-once semantics. That means
-that the first occurrence of `force (x f)` will evaluate the computation
-associated with `x`
+Recall that `Optimal` is explicitly lazy. This means that the creation of `f`
+does not trigger evaluation of the expressions bound within it. Furthermore,
+accessing the fields `x` and `y` do nothing more than expose the
+computations-in-waiting - they do not evaluate them. Forcing `xThunk` is the
+first time the computation associated with `x` is performed - likewise for
+forcing `yThunk`.
 
-In `Optimal`, every binding acts as a shared computation, local to a particular
-instance to a module. What this means 
+Recall also that `Optimal` evaluates things at most once. This means that once
+`xThunk` is forced, its result is cached indefinitely, and any other
+computations in the module that refer to `x` by name can leverage this caching.
+So, when `yThunk` is forced, it does not recalculate the result of `x` - it
+instead refers to the cached result, and is able to evaluate to `'T'`
+immediately.
 
-`force`ing `x` is very fast; to evaluate a hard-coded number is practically
-immediate. `force`ing `y` takes much longer, however, because the computation is
-expensive. `y`, then, is a good candidate for reuse. 
+We happened to order the `force` invocations in dependency order - `y` depends
+on `x`, as declared, and we forced `x` first and `y` second. However, suppose we
+reorder the `force`s and rerun the code:
+```diff
+-   force xThunk >>= print
+    force yThunk >>= print
++   force xThunk >>= print
+```
+
+There's obviously no way to avoid computing `x` in order to display the result
+of `y`, so you can expect `x`'s computation to be evaluated by the time `y`'s
+result is printed. However, `Optimal`'s caching/sharing semantics means that
+forcing `xThunk` will leverage the result that was computed when forcing
+`yThunk`, so `x`'s result prints immediately after `y`'s!
 
 
+# Source Language Details
 
-TODO: this example is too contrived. Need an example that really demonstrates
-automatic reuse of `y`, not just something that can more easily be accomplished
-by `let`-binding it
+At the moment, as mentioned, the only choice of source language (`L`) is
+Haskell. In principle, the quickest way to support a new language is to create a
+compilation procedure to convert the language into Template Haskell expressions
+(`Exp`s).
+
+Since `Optimal` is embedded in Haskell regardless of the source language,
+though, the language and its `Exp` representation need to meet the typing
+requirements of `Optimal`.
+
+
+## Expressions
+
+Expression-binding looks like this:
+```
+...
+  x = <| pure (isPrime 30000001) |>,
+...
+```
+
+When a module binds an expression like this, and when the identifier is exposed
+in the module's interface as type `T`, the expression needs to have the Haskell
+type `MonadIO m => m T`. `x` was declared in its module's type as `Bool`, so
+this expression types as `MonadIO m => m Bool`. Recall that `pure` is used
+repeatedly above - it is the trivial monadic embedding for computations that
+don't require monadic facilities.
+
+
+## Vectors
+
+TODO
+
+
+## Tuple Patterns
+
+TODO
+
+- Can introduce "regular" values or vectors of values
+  - `L` need not have a notion of lists!
+- Can eliminate lists of values
+
+
 
 ---
 
 ++++ Nothing polished below this point ++++
-
-
-```diff
--   force (x f) >>= print
-    force (y f) >>= print
-+   force (x f) >>= print
-```
-
-
-
-
-
-The typical programming solution to this problem is to bind an intermediate
-value and reuse that value across the various branches of computation that
-require it. `Optimal` seeks to automate this: 
-
-
-
-
-
-
-
-- Within a Haskell project, can use `optimal` quasiquoter to write "module" of
-  names binding expressions
-  - Syntax tutorial
-- Can introduce "regular" values or vectors of values
-  - `L` need not have a notion of lists!
-- Can eliminate lists of values
-- Outside the quasiquoter, modules generate functions, which you can use in
-  IO(-like) environments
 
 
 ## How does Optimal(L) work?
@@ -196,15 +254,21 @@ If you can create a translation of your language to template haskell expressions
 - Create a semantics of your language interpretable in Haskell
   - At the moment, I think this amounts to a TH translation
 
-- I am trying to push later the point at which `L` is translated to Haskell
-  - Instead, I'm trying to describe the semantics it needs to have in order to
-    make its way through the compilation process
-  
-- Is there a way to describe the semantics fully enough that we can automate a
-  translation to TH?
-  - Almost certainly not
 
-- If translation is required, why go to the trouble of doing all of this in
-  advance of translation?
+# Reference
 
+## Types
+
+`Optimal` declarations can make use of any in-scope Haskell type, but users can
+also declare their own types:
+```
+TYDECL ::= 'type' TYIDENT '=' TYPE
+
+TYIDENT ::= [A-Z][a-z0-9_]*
+
+TYPE
+  ::= TYIDENT
+    | '{' (VARIDENT ':' TYPE ',')+ '}'
+    | [TYIDENT]
+```
 
