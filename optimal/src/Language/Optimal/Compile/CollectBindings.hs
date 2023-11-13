@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Language.Optimal.Compile.Haskell.CollectBindings where
+module Language.Optimal.Compile.CollectBindings where
 
 import Data.Set (Set)
 import Data.Set qualified as Set

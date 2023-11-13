@@ -5,11 +5,11 @@
 {-# LANGUAGE UnboxedTuples #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Language.Optimal.Compile.Haskell.Free (tests) where
+module Test.Language.Optimal.Compile.Free (tests) where
 
 import Data.String (IsString (..))
 import Language.Haskell.TH (Name, mkName, runQ)
-import Language.Optimal.Compile.Haskell.Free (freeVars)
+import Language.Optimal.Compile.Free (freeVars)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Util (moduleName)

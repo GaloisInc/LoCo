@@ -1,10 +1,10 @@
 {-# LANGUAGE DefaultSignatures #-}
 
-module Language.Optimal.Compile.Haskell.Free where
+module Language.Optimal.Compile.Free where
 
 import Data.Set (Set)
 import Language.Haskell.TH (Exp, Name)
-import Language.Optimal.Compile.Haskell.RenameFree (FreeVars (..), RenameFree (..))
+import Language.Optimal.Compile.RenameFree (FreeVars (..), RenameFree (..))
 
 class Free a where
   freeVars :: a -> Set Name

@@ -11,9 +11,9 @@ import Data.Set qualified as Set
 import Language.Haskell.TH
 import Language.Haskell.TH qualified as TH
 import Language.Optimal.Collection
-import Language.Optimal.Compile.Haskell.Free (Free, freeVars)
-import Language.Optimal.Compile.Haskell.Rename (Rename, rename)
-import Language.Optimal.Compile.Haskell.TH (Haskell (asExp))
+import Language.Optimal.Compile.Free (Free, freeVars)
+import Language.Optimal.Compile.Rename (Rename, rename)
+import Language.Optimal.Compile.Haskell (Haskell (asExp))
 import Language.Optimal.Syntax
 import Language.Optimal.Syntax qualified as Optimal
 import Language.Optimal.Typecheck (checkArity, expandType)

@@ -24,11 +24,11 @@ library
     exposed-modules:
         Language.Optimal.Collection
         Language.Optimal.Compile
-        Language.Optimal.Compile.Haskell.CollectBindings
-        Language.Optimal.Compile.Haskell.Free
-        Language.Optimal.Compile.Haskell.TH
-        Language.Optimal.Compile.Haskell.Rename
-        Language.Optimal.Compile.Haskell.RenameFree
+        Language.Optimal.Compile.CollectBindings
+        Language.Optimal.Compile.Free
+        Language.Optimal.Compile.Haskell
+        Language.Optimal.Compile.Rename
+        Language.Optimal.Compile.RenameFree
         Language.Optimal.Parse
         Language.Optimal.Quote
         Language.Optimal.Samples
@@ -75,8 +75,8 @@ test-suite optimal-test
 
     other-modules:
         Test.Language.Optimal.Compile
-        Test.Language.Optimal.Compile.Haskell.Free
-        Test.Language.Optimal.Compile.Haskell.Rename
+        Test.Language.Optimal.Compile.Free
+        Test.Language.Optimal.Compile.Rename
         Test.Language.Optimal.Parse
         Test.Language.Optimal.Typecheck
 

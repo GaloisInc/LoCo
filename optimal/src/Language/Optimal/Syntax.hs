@@ -13,7 +13,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Language.Haskell.TH (Name)
-import Language.Optimal.Compile.Haskell.Free (Free (..))
+import Language.Optimal.Compile.Free (Free (..))
 import Language.Optimal.Util
 
 data ModuleDecl e = ModuleDecl

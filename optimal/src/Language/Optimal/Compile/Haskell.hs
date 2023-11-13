@@ -1,4 +1,4 @@
-module Language.Optimal.Compile.Haskell.TH where
+module Language.Optimal.Compile.Haskell where
 
 import Language.Haskell.TH (Exp, Q)
 

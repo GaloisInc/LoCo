@@ -4,11 +4,11 @@
 {-# LANGUAGE UnboxedTuples #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Language.Optimal.Compile.Haskell.Rename (tests) where
+module Test.Language.Optimal.Compile.Rename (tests) where
 
 import Data.String (IsString (..))
 import Language.Haskell.TH
-import Language.Optimal.Compile.Haskell.Rename (rename)
+import Language.Optimal.Compile.Rename (rename)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@=?))
 import Util (moduleName)
