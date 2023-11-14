@@ -1,4 +1,4 @@
-module Language.Optimal.Quote where
+module Language.Optimal.Quote (optimal, optimalVerbose) where
 
 import Data.Char (isSpace)
 import Data.List (isPrefixOf)
@@ -14,21 +14,30 @@ import Language.Optimal.Syntax
 optimal :: QuasiQuoter
 optimal =
   QuasiQuoter
-    { quoteDec = decls,
+    { quoteDec = decls False,
       quoteExp = \_ -> fail "cannot use `optimal` in expression contexts",
       quotePat = \_ -> fail "cannot use `optimal` in pattern contexts",
       quoteType = \_ -> fail "cannot use `optimal` in type contexts"
     }
 
-decls :: String -> Q [Dec]
-decls src =
+optimalVerbose :: QuasiQuoter
+optimalVerbose =
+  QuasiQuoter
+    { quoteDec = decls True,
+      quoteExp = \_ -> fail "cannot use `optimal` in expression contexts",
+      quotePat = \_ -> fail "cannot use `optimal` in pattern contexts",
+      quoteType = \_ -> fail "cannot use `optimal` in type contexts"
+    }
+
+decls :: Bool -> String -> Q [Dec]
+decls verbose src =
   do
     (tyDecls, modDecls) <- either fail pure (parseOptimal parseExp (Text.pack src'))
 
     let tyEnv = Map.fromList [(tdName, tdType) | TypeDecl {..} <- tyDecls]
 
     tyQDecs <- compileOptimalTypeDecls tyEnv tyDecls
-    modQDecs <- compileOptimalModuleDecls tyEnv modDecls
+    modQDecs <- compileOptimalModuleDecls verbose tyEnv modDecls
     pure (tyQDecs <> modQDecs)
   where
     comment = "--"

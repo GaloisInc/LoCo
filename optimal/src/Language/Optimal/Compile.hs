@@ -1,8 +1,12 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Language.Optimal.Compile where
 
+import Control.Monad.Reader (MonadReader (..), ReaderT (..), asks)
+import Control.Monad.Trans (lift)
+import Data.List (intercalate)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
@@ -12,8 +16,8 @@ import Language.Haskell.TH
 import Language.Haskell.TH qualified as TH
 import Language.Optimal.Collection
 import Language.Optimal.Compile.Free (Free, freeVars)
-import Language.Optimal.Compile.Rename (Rename, rename)
 import Language.Optimal.Compile.Haskell (Haskell (asExp))
+import Language.Optimal.Compile.Rename (Rename, rename)
 import Language.Optimal.Syntax
 import Language.Optimal.Syntax qualified as Optimal
 import Language.Optimal.Typecheck (checkArity, expandType)
@@ -22,23 +26,24 @@ import Language.Optimal.Util (Named (name))
 -- XXX: it's possible to specialize all of this to `Exp`, or to remove the
 -- `Free`/`Rename` constraints, but is it appropriate?
 
-compileOptimalModuleDecls :: (Haskell e) => Env Optimal.Type -> [ModuleDecl e] -> Q [Dec]
-compileOptimalModuleDecls tyEnv modDecls =
+compileOptimalModuleDecls :: (Haskell e) => Bool -> Env Optimal.Type -> [ModuleDecl e] -> Q [Dec]
+compileOptimalModuleDecls verbose tyEnv modDecls =
   do
     hsModDecls <- mapM (sequenceModuleDecl . fmap asExp) modDecls
     let elaboratedModDecls = map elaborate hsModDecls
     case mapM_ checkArity elaboratedModDecls of
       Left err -> fail err
       Right () -> pure ()
-    concat <$> mapM compileOptimalModuleDecl elaboratedModDecls
+    concat <$> mapM (compileOptimalModuleDecl verbose) elaboratedModDecls
   where
     elaborate ModuleDecl {..} = ModuleDecl {modTy = expandType tyEnv modTy, ..}
 
-compileOptimalModuleDecl :: (Free e, Haskell e, Rename e) => ModuleDecl e -> Q [Dec]
-compileOptimalModuleDecl ModuleDecl {..} =
+compileOptimalModuleDecl :: (Free e, Haskell e, Rename e) => Bool -> ModuleDecl e -> Q [Dec]
+compileOptimalModuleDecl verbose ModuleDecl {..} =
   do
     orderedModuleBindings <- sortModuleBindings modEnv
-    assignments <- compileModuleBindings modNameBinds orderedModuleBindings
+    let mqEnv = mkModQEnv modNameBinds (name modName) verbose
+    assignments <- runModQ (compileModuleBindings orderedModuleBindings) mqEnv
     (modTyName, modTyEnv) <- recordResult modTy
     mkModule <- noBindS [|pure $(constructModule modTyEnv modTyName)|]
     let body = DoE Nothing (assignments <> [mkModule])
@@ -53,27 +58,65 @@ compileOptimalModuleDecl ModuleDecl {..} =
     modSymBinds = concatMap patSyms (Map.keys modEnv)
     modNameBinds = Set.fromList (map name modSymBinds)
 
-compileModuleBindings :: (Free e, Haskell e, Rename e) => Set Name -> [(Pattern Name, ModuleBinding e)] -> Q [Stmt]
-compileModuleBindings modBinds orderedModBinds =
-  sequence [bindS (mkPat p) (compileBinding p binding) | (p, binding) <- orderedModBinds]
+data ModQEnv = ModQEnv
+  { mcModBinds :: Set Name,
+    mcPath :: [Name], -- [Symbol]?
+    mcVerbose :: Bool
+  }
+
+mkModQEnv :: Set Name -> Name -> Bool -> ModQEnv
+mkModQEnv mcModBinds mcMod mcVerbose = ModQEnv {..}
   where
-    mkPat p =
-      case p of
+    mcPath = [mcMod]
+
+showPath :: [Name] -> String
+showPath names = intercalate "." (map show (reverse names))
+
+newtype ModQ a = ModQ {unModQ :: ReaderT ModQEnv Q a}
+  deriving (Applicative, Functor, Monad, MonadReader ModQEnv)
+
+runModQ :: ModQ a -> ModQEnv -> Q a
+runModQ (ModQ mc) = runReaderT mc
+
+onPath :: Name -> ModQ a -> ModQ a
+onPath n = local (\ModQEnv {..} -> ModQEnv {mcPath = n : mcPath, ..})
+
+withBinds :: Set Name -> ModQ a -> ModQ a
+withBinds binds = local (\ModQEnv {..} -> ModQEnv {mcModBinds = binds, ..})
+
+q :: Q a -> ModQ a
+q action = ModQ (lift action)
+
+getBinds :: ModQ (Set Name)
+getBinds = asks mcModBinds
+
+instance Quote ModQ where
+  newName n = ModQ (lift (newName n))
+
+instance MonadFail ModQ where
+  fail = ModQ . lift . fail
+
+compileModuleBindings :: (Free e, Haskell e, Rename e) => [(Pattern Name, ModuleBinding e)] -> ModQ [Stmt]
+compileModuleBindings orderedModBinds =
+  sequence [bindS (mkPat pat) (compileBinding pat binding) | (pat, binding) <- orderedModBinds]
+  where
+    mkPat pat =
+      case pat of
         Sym s -> varP s
         Tup ss -> tupP (map varP ss)
 
     compileBinding pat binding =
       case (pat, binding) of
-        (Sym _, Expression expr) -> exprIntro modBinds expr
-        (Tup _, Expression expr) -> tupleIntro modBinds expr
+        (Sym s, Expression expr) -> onPath s $ exprIntro expr
+        (Tup ss, Expression expr) -> onPath undefined $ tupleIntro expr
         (Tup _, _) -> fail "cannot bind a tuple to a non-expression"
-        (_, Value expr) -> valIntro modBinds expr
-        (_, VectorReplicate len fill) -> vecReplicate modBinds len fill
-        (_, VectorGenerate len fill) -> vecGenerate modBinds len fill
-        (_, VectorIndex vec idx) -> vecIndex modBinds vec idx
-        (_, VectorMap vec fn) -> vecMap modBinds vec fn
-        (_, ModuleIntro m params) -> modIntro modBinds m params
-        (_, ModuleIndex m field) -> modIndex modBinds m field
+        (Sym s, Value expr) -> onPath s $ valIntro expr
+        (Sym s, VectorReplicate len fill) -> onPath s $ vecReplicate len fill
+        (Sym s, VectorGenerate len fill) -> onPath s $ vecGenerate len fill
+        (Sym s, VectorIndex vec idx) -> onPath s $ vecIndex vec idx
+        (Sym s, VectorMap vec fn) -> onPath s $ vecMap vec fn
+        (Sym s, ModuleIntro m params) -> onPath s $ modIntro m params
+        (Sym _, ModuleIndex m field) -> onPath (name m) $ onPath (name field) $ modIndex m field
 
 recordResult :: MonadFail m => Optimal.Type -> m (Name, Env Optimal.Type)
 recordResult modTy =
@@ -105,26 +148,39 @@ constructModule fields tyName =
 --------------------------------------------------------------------------------
 
 -- | Result has type `m (Thunked m a)`
-exprIntro :: (Free e, Haskell e, Rename e) => Set Name -> e -> Q Exp
-exprIntro modBinds expr =
-  [|delayAction $(forceThunks modBinds expr)|]
+exprIntro :: (Free e, Haskell e, Rename e) => e -> ModQ Exp
+exprIntro expr =
+  do
+    expr' <- asExp expr
+    verbose <- asks mcVerbose
+    path <- asks mcPath
+    let expr''
+          | verbose =
+              UInfixE
+                (AppE (VarE "liftIO") (AppE (VarE "putStrLn") (LitE (StringL (showPath path)))))
+                (VarE ">>")
+                expr'
+          | otherwise = expr'
+
+    [|delayAction $(forceThunks expr'')|]
 
 -- | Result has type `m (Thunked m a, Thunked m b)`
-tupleIntro :: (Free e, Haskell e, Rename e) => Set Name -> e -> Q Exp
-tupleIntro modBinds expr =
-  [|delayTuple $(forceThunks modBinds expr)|]
+tupleIntro :: (Free e, Haskell e, Rename e) => e -> ModQ Exp
+tupleIntro expr =
+  [|delayTuple $(forceThunks expr)|]
 
-valIntro :: (Free e, Haskell e, Rename e) => Set Name -> e -> Q Exp
-valIntro modBinds expr =
+valIntro :: (Free e, Haskell e, Rename e) => e -> ModQ Exp
+valIntro expr =
   do
     thExpr <- asExp expr
-    exprIntro modBinds (AppE (VarE "pure") thExpr)
+    exprIntro (AppE (VarE "pure") thExpr)
 
 -- | Create a version of the expression that evaluates itself in a context in
 -- which all its variables that refer to thunks have been forced
-forceThunks :: (Free e, Haskell e, Rename e) => Set Name -> e -> Q Exp
-forceThunks modBinds expr =
+forceThunks :: (Free e, Haskell e, Rename e) => e -> ModQ Exp
+forceThunks expr =
   do
+    modBinds <- getBinds
     thunkRenaming <- mkRenaming modBinds expr
     let forceCtx = mkForceContext thunkRenaming
     let f n = fromMaybe n (thunkRenaming Map.!? n)
@@ -161,12 +217,12 @@ forcePrintExpr s e =
 -- | Create fresh names for all the thunks in an expression
 --
 -- NOTE: could be a Bimap, if need be
-mkRenaming :: Free e => Set Name -> e -> Q (Map Name Name)
+mkRenaming :: Free e => Set Name -> e -> ModQ (Map Name Name)
 mkRenaming modBinds expr =
   let thunkVars = freeVars expr `Set.intersection` modBinds
    in sequence (Map.fromSet freshen thunkVars)
 
-freshen :: Name -> Q Name
+freshen :: Name -> ModQ Name
 freshen = newName . show
 
 mkForceContext :: Map Name Name -> [Stmt]
@@ -178,46 +234,48 @@ mkForceContext thunkRenaming =
 -------------------------------------------------------------------------------
 
 -- | The result has type m (Thunked m (Vector m a))
-vecReplicate :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
-vecReplicate modBinds len fill =
+vecReplicate :: (Free e, Haskell e, Rename e) => Symbol -> e -> ModQ Exp
+vecReplicate len fill =
   do
     expr <- [|vReplicate $(varE (name len)) $(asExp fill)|]
-    exprIntro modBinds expr
+    exprIntro expr
 
-vecGenerate :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
-vecGenerate modBinds len fill =
+vecGenerate :: (Free e, Haskell e, Rename e) => Symbol -> e -> ModQ Exp
+vecGenerate len fill =
   do
     expr <- [|vGenerate $(varE (name len)) $(asExp fill)|]
-    exprIntro modBinds expr
+    exprIntro expr
 
 -- | The result has type m (Thunked m a)
-vecIndex :: Set Name -> Symbol -> Symbol -> Q Exp
-vecIndex modBinds vec idx =
+vecIndex :: Symbol -> Symbol -> ModQ Exp
+vecIndex vec idx =
   do
     expr <- [|vIndex $(varE (name vec)) $(varE (name idx))|]
-    exprIntro modBinds expr
+    exprIntro expr
 
-vecMap :: (Free e, Haskell e, Rename e) => Set Name -> Symbol -> e -> Q Exp
-vecMap modBinds vec fn =
+vecMap :: (Free e, Haskell e, Rename e) => Symbol -> e -> ModQ Exp
+vecMap vec fn =
   do
     expr <- [|vMap $(asExp fn) $(varE (name vec))|]
-    exprIntro modBinds expr
+    exprIntro expr
 
 --------------------------------------------------------------------------------
 
-modIntro :: Set Name -> Symbol -> [Symbol] -> Q Exp
-modIntro modBinds m ps =
+modIntro :: Symbol -> [Symbol] -> ModQ Exp
+modIntro m ps =
   let modExpr = foldl1 AppE (map (VarE . name) (m : ps))
-   in exprIntro modBinds modExpr
+   in exprIntro modExpr
 
-modIndex :: Set Name -> Symbol -> Symbol -> Q Exp
-modIndex modBinds m field =
-  let indexExpr = forceExpr (AppE (VarE (name field)) (VarE (name m)))
-      -- We delete `f` from the module bindings because it should always
-      -- refer to a record accessor, even if it happens to be previously
-      -- bound in the module
-      modBinds' = delete (name field) modBinds
-   in exprIntro modBinds' indexExpr
+modIndex :: Symbol -> Symbol -> ModQ Exp
+modIndex m field =
+  do
+    modBinds <- getBinds
+    let indexExpr = forceExpr (AppE (VarE (name field)) (VarE (name m)))
+    -- We delete `field` from the module bindings because it should always
+    -- refer to a record accessor, even if it happens to be previously
+    -- bound in the module
+    let modBinds' = delete (name field) modBinds
+    withBinds modBinds' (exprIntro indexExpr)
 
 --------------------------------------------------------------------------------
 

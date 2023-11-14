@@ -1,9 +1,9 @@
 module Language.Optimal.Compile.Haskell where
 
-import Language.Haskell.TH (Exp, Q)
+import Language.Haskell.TH (Exp, Quote)
 
 class Haskell a where
-  asExp :: a -> Q Exp
+  asExp :: Quote m => a -> m Exp
 
 instance Haskell Exp where
   asExp = pure
