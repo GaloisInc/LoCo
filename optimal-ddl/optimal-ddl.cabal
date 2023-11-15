@@ -23,7 +23,7 @@ library
     import: common
 
     exposed-modules:
-        Language.Optimal.Samples.Daedalus
+        Language.Optimal.Samples.ICC
         Language.Optimal.Samples.Daedalus.Util
         
     build-depends:

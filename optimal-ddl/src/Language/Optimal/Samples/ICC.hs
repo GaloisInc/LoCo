@@ -3,7 +3,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -ddump-splices #-}
 
-module Language.Optimal.Samples.Daedalus where
+module Language.Optimal.Samples.ICC where
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Daedalus.RTS.Numeric qualified as DDL
