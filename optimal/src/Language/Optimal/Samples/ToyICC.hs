@@ -2,7 +2,7 @@
 
 {-# HLINT ignore "Avoid lambda" #-}
 
-module Language.Optimal.Samples.ICC where
+module Language.Optimal.Samples.ToyICC where
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Bits (Bits (..))

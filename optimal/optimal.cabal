@@ -34,9 +34,9 @@ library
         Language.Optimal.Quote
         Language.Optimal.Samples
         Language.Optimal.Samples.Doc
-        Language.Optimal.Samples.ICC
         Language.Optimal.Samples.Nested
         Language.Optimal.Samples.Parameterized
+        Language.Optimal.Samples.ToyICC
         Language.Optimal.Samples.Tuple
         Language.Optimal.Samples.Vector
         Language.Optimal.Samples2
