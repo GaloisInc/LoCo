@@ -33,7 +33,6 @@ library
         Language.Optimal.Parse
         Language.Optimal.Quote
         Language.Optimal.Samples
-        Language.Optimal.Samples.Doc
         Language.Optimal.Samples.Nested
         Language.Optimal.Samples.Parameterized
         Language.Optimal.Samples.ToyICC

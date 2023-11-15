@@ -17,6 +17,7 @@ import           System.IO.Unsafe (unsafePerformIO)
 -- package locc (optimal):
 import           Language.Optimal.Quote (optimal)
 import           Thunk.RefVal (Thunked, delayAction, force)
+import           Thunk.Vector
 
 -- local PEAR modules:
 import           Language.PEAR.Primitives

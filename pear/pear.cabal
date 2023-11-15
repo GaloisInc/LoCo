@@ -28,7 +28,7 @@ common common
         -Wno-unrecognised-pragmas
         -Wno-missing-signatures
           -- FIXME: add back
-          
+
     default-extensions:
         ImportQualifiedPost
         LambdaCase
@@ -37,12 +37,12 @@ common common
 
     default-language: GHC2021
     -- really want? if so, probably some LANGUAGE pragmas to remove.
-    
+
 library
     import: common
-    
+
     hs-source-dirs: src
-    
+
     exposed-modules:
         Language.PEAR.Region.API
         Language.PEAR.Region.Implem
@@ -51,12 +51,15 @@ library
         Language.PEAR.ParserLibrary
         Language.PEAR.Types
         Language.PEAR.Util
-        
+
         Language.OptimalPEAR.Examples.ICC_V1
-        Language.OptimalPEAR.Examples.ICC_Optimal
+        -- Language.OptimalPEAR.Examples.ICC_Optimal
         Language.OptimalPEAR.Examples.Trivial
-        Language.OptimalPEAR.Examples.ICC_Demo
+        -- Language.OptimalPEAR.Examples.ICC_Demo
         Language.OptimalPEAR.Examples.ICC_Inputs
+
+        -- Language.PEARL.API
+        -- Language.PEARL.Implem
 
     build-depends:
         base ^>=4.16.4.0,
@@ -65,7 +68,7 @@ library
         QuickCheck,
         generic-arbitrary,
         transformers
-        
+
 test-suite pear-test
     import: common
 
@@ -75,4 +78,3 @@ test-suite pear-test
 
     build-depends:
         base ^>=4.16.4.0
-                
