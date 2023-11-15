@@ -57,10 +57,10 @@ mkOptimalICC source = {
   origInput = {| newInput "<filename>" source |},
 
   profileHeaderInput = {| inputTake 128 origInput |},
-  profileHeader = <| parseProfileHeader profileHeaderInput |>,
+  profileHeader      = <| parseProfileHeader profileHeaderInput |>,
 
   tagTableInput = {| inputDrop 128 origInput |},
-  tagTable = module mkOptimalTagTable tagTableInput,
+  tagTable      = module mkOptimalTagTable tagTableInput,
 }
 
 
@@ -69,10 +69,10 @@ type OptimalTagTable = { ttLen : UInt32, ttElems : [OptimalTag] }
 mkOptimalTagTable : Input -> OptimalTagTable
 mkOptimalTagTable input = {
   ttLenInput = {| inputTake 4 input |},
-  ttLen = <| parseU32 ttLenInput |>,
+  ttLen      = <| parseU32 ttLenInput |>,
 
   ttElemsInput = {| inputDrop 4 input |},
-  ttElems = generate ttLen <| \i -> mkOptimalTag i ttElemsInput |>,
+  ttElems      = generate ttLen <| \i -> mkOptimalTag i ttElemsInput |>,
 }
 
 
@@ -80,39 +80,39 @@ type OptimalTag = { eSig : UInt32, eOffset : UInt32, eSize : UInt32, eElem : Tag
 
 mkOptimalTag : Int -> Input -> OptimalTag
 mkOptimalTag idx input = {
-  eHeaderSize = {| 12 |},
+  eHeaderSize  = {| 12 |},
   eHeaderBegin = {| fromIntegral idx * eHeaderSize |},
-  eHeaderEnd = {| eHeaderBegin + eHeaderSize |},
+  eHeaderEnd   = {| eHeaderBegin + eHeaderSize |},
   eHeaderInput = {| inputSlice eHeaderBegin eHeaderEnd input |},
 
   eSigInput = {| inputSlice 0 4 eHeaderInput |},
-  eSig = <| parseU32 eSigInput |>,
+  eSig      = <| parseU32 eSigInput |>,
 
   eOffsetInput = {| inputSlice 4 8 eHeaderInput |},
-  eOffset = <| parseU32 eOffsetInput |>,
+  eOffset      = <| parseU32 eOffsetInput |>,
 
   eSizeInput = {| inputSlice 8 12 eHeaderInput |},
-  eSize = <| parseU32 eSizeInput |>,
+  eSize      = <| parseU32 eSizeInput |>,
 
   -- Our `input` elides the 132 bytes that comprise the ProfileHeader and tag
   -- table length, so we adjust our offsets accordingly
   eElemBegin = {| fromIntegral eOffset - 132 |},
-  eElemEnd = {| eElemBegin + fromIntegral eSize |},
+  eElemEnd   = {| eElemBegin + fromIntegral eSize |},
   eElemInput = {| inputSlice eElemBegin eElemEnd input |},
-  eElem = <| parseTag eSig eElemInput |>,
+  eElem      = <| parseTag eSig eElemInput |>,
 }
 
 
 getTagTableElem : OptimalICC -> Int -> OptimalTag
 getTagTableElem icc idx = {
   tagTable = icc.tagTable,
-  ttElems = tagTable.ttElems,
-  ttElem = index ttElems idx,
+  ttElems  = tagTable.ttElems,
+  ttElem   = index ttElems idx,
 
-  eSig = ttElem.eSig,
+  eSig    = ttElem.eSig,
   eOffset = ttElem.eOffset,
-  eSize = ttElem.eSize,
-  eElem = ttElem.eElem,
+  eSize   = ttElem.eSize,
+  eElem   = ttElem.eElem,
 }
 |]
 
