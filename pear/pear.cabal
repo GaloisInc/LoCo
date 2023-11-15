@@ -58,8 +58,8 @@ library
         -- Language.OptimalPEAR.Examples.ICC_Demo
         Language.OptimalPEAR.Examples.ICC_Inputs
 
-        -- Language.PEARL.API
-        -- Language.PEARL.Implem
+        Language.LR.API
+        -- Language.LR.Implem
 
     build-depends:
         base ^>=4.16.4.0,
