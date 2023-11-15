@@ -14,7 +14,7 @@ import           Data.Word
 import           Control.Monad.IO.Class
 import           System.IO.Unsafe (unsafePerformIO)
 
--- package locc (optimal):
+-- package optimal:
 import           Language.Optimal.Quote (optimal)
 import           Thunk.RefVal (Thunked, delayAction, force)
 import           Thunk.Vector
