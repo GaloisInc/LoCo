@@ -1,4 +1,3 @@
-{-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -ddump-splices #-}
 
 {-# HLINT ignore "Avoid lambda" #-}

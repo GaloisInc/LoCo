@@ -1,4 +1,3 @@
-{-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -ddump-splices #-}
 
 module Language.Optimal.Samples.Parameterized where

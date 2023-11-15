@@ -1,4 +1,3 @@
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
   -- alternatively we can require user to provide a signature for their
   -- generated optimal module.

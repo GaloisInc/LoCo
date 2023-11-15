@@ -1,5 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
