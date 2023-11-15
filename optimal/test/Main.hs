@@ -7,6 +7,7 @@ import Test.Language.Optimal.Parse qualified
 import Test.Language.Optimal.Typecheck qualified
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Thunk.Vector qualified
+import Util (moduleName)
 
 main :: IO ()
 main = defaultMain tests
@@ -14,7 +15,7 @@ main = defaultMain tests
 tests :: TestTree
 tests =
   testGroup
-    "main"
+    $moduleName
     [ Test.Language.Optimal.Compile.tests,
       Test.Language.Optimal.Compile.Free.tests,
       Test.Language.Optimal.Compile.Rename.tests,
