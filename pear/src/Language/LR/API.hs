@@ -1,23 +1,33 @@
-{-# LANGUAGE TypeSynonymInstances #-}
--- {-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
-module Language.LR.API where
+module Language.LR.API
+  ( module Language.LR.API
+  , except
+  , throwE
+  )
+where
 
 -- base pkgs:
-import Data.List
+import           Data.List
+import           Control.Exception (assert)
 
 -- transformer pkg:
--- import Control.Monad.IO.Class
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Reader
-import Control.Monad.Trans.Except
--- import Data.Functor.Identity
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Reader
+import           Control.Monad.Trans.Except
+-- import        Control.Monad.IO.Class
+-- import        Data.Functor.Identity
 
 -- FIXME: improve these to better fit the use here
 import           Language.PEAR.Types
 import           Language.PEAR.Util
 import qualified Language.PEAR.Region.API as R -- region
 import           Language.PEAR.Region.API(Region(..))
+
+-- FIXME[R1]: Hide the abstraction!!
+--   - make some types abstract
+--   - let the "right functions" out, hide everything else
+--   - but also export needed functions/types from Region/Etc
 
 ---- Types ---------------------------------------------------------
 
@@ -39,8 +49,6 @@ type PT m a = ExceptT Errors (ReaderT Contents m) a
 
 runPT :: PT m a -> Contents -> m (Possibly a)
 runPT m = runReaderT (runExceptT m)
-
-
 
 ---- primitives ----------------------------------------------------
 
@@ -75,7 +83,7 @@ mkPrimDRP wc f =
 
 ---- Applying Parsers to Regions -----------------------------------
 
-p @!  x = p `appSRP` x
+p @!  x = p `appSRP'` x
 p @@! x = p `appDRP` x
 
 appSRP :: Monad m => SRP m a -> Region -> PT m a
@@ -120,13 +128,26 @@ appSRP' p r =
 
 -- these will correctly set appropriate widths/WCs:
 
-sequenceSRPs :: SRP m a -> SRP m b -> SRP m (a,b)
+pairSRPs :: SRP m a -> SRP m b -> SRP m (a,b)
+pairSRPs = niy
+
+sequenceSRPs :: [SRP m a] -> SRP m [a]
 sequenceSRPs = niy
 
 sequenceDRPs :: DRP m a -> DRP m b -> DRP m (a,b)
 sequenceDRPs = niy
   -- useful when intermediate regions unimportant.
 
+pManySRPs :: Monad m => Int -> SRP m a -> SRP m [a]
+pManySRPs i p =
+  assert (i >= 0) $
+  ( fromIntegral i * widthSingle
+  , \r-> do
+         let rs = R.splitWidths r (replicate i widthSingle)
+         mapM (appSRP p) rs
+  )
+  where
+  widthSingle = srpWidth p
 
 ---- internal monadic primitives, not exported -------------------------------
 
@@ -194,8 +215,10 @@ mCheckWC wc r = if checkWC wc (r_width r) then
 
 ---- The LR implementation -----------------------------------------
 
+-- NOTE: these can only be applied to 'matching' regions
 -- TODO: turn the following into abstract datatypes:
---   these can only be applied to 'matching' regions
+--   - use short names and use OverloadedRecordDot
+
 type SRP m a = (Width, Region -> PT m a)           -- Static Region Parser
 type DRP m a = (WC   , Region -> PT m (a,Region))  -- Dynamic Region Parser
 
@@ -203,8 +226,6 @@ srpWidth  :: SRP m a -> Width
 drpWidthC :: DRP m a -> WC
 srpWidth  = fst
 drpWidthC = fst
-
-
 
 ---- utilities -----------------------------------------------------
 

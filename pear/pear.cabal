@@ -59,6 +59,7 @@ library
         Language.OptimalPEAR.Examples.ICC_Inputs
 
         Language.LR.API
+        Language.LR.ExampleICC
         -- Language.LR.Implem
 
     build-depends:
