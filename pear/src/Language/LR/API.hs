@@ -33,31 +33,19 @@ type Contents = String -- or ByteString
 
 ---- The PT Monad Transformer --------------------------------------
 
+-- PT - Parser [monad] Transformer
 type PT m a = ExceptT Errors (ReaderT Contents m) a
+  -- FIXME[R2]: make abstract.
 
 runPT :: PT m a -> Contents -> m (Possibly a)
 runPT m = runReaderT (runExceptT m)
 
 
 
----- The LR abstraction (exposed) --------------------------------
+---- primitives ----------------------------------------------------
 
-runParser :: Parser a -> Contents -> Possibly a
-runParser = niy
-
--- instance Monad Parser where {}
-
-type Parser a = ParserImplem a
-                  -- TODO: Replace with PT m
-
--- Hmmm: use Parser m type-class instead?
--- class Monad m => Parser m where {}
-
-getWidth  :: SRP a -> Width
-getWC_DRP :: DRP a -> WC
-
-mkPrimSRP :: Width -> (Contents -> Possibly a        ) -> SRP a
-mkPrimDRP :: WC    -> (Contents -> Possibly (a,Width)) -> DRP a
+mkPrimSRP :: Monad m => Width -> (Contents -> Possibly a        ) -> SRP m a
+mkPrimDRP :: Monad m => WC    -> (Contents -> Possibly (a,Width)) -> DRP m a
 
   -- and for now, we're ignoring non-failing parsers!  Because?
   --  - Optimal doesn't currently/easily support.
@@ -65,50 +53,66 @@ mkPrimDRP :: WC    -> (Contents -> Possibly (a,Width)) -> DRP a
   --  - How much have we lost?  In most any parser there will be at least
   --    some possibility for failure, so we'll be "lifting" at some point.
 
+mkPrimSRP w f =
+  (w, \r-> do
+           cs <- unsafeReadRegion r
+           case f cs of
+             Left e  -> throwE e
+             Right a -> return a
+           -- note that w is checked during apply
+  )
+
+mkPrimDRP wc f =
+  ( wc
+  , \r-> case subRegionMax r 0 wc of
+           Left e   -> throwE e
+           Right r' ->
+               -- get region that fits in 'wc'
+               do
+               cs <- readRegion r'
+               case f cs of
+                 Left e      -> throwE e
+                 Right (a,w) ->
+                   --  assert (checkWC wc w) -- ??  FIXME!!
+                   return (a, snd $ R.split1 r' w) -- ~obscure
+                   -- FIXME: TODO: return good error msg
+  )
+
+
+---- applications --------------------------------------------------
+
 p @!  x = p `appSRP` x
 p @@! x = p `appDRP` x
 
-appSRP :: SRP a -> Region -> Parser a
+appSRP :: SRP m a -> Region -> PT m a
 appSRP = undefined
 
-appDRP :: DRP a -> Region -> Parser ((a,Region),Region)
+appDRP :: DRP m a -> Region -> PT m ((a,Region),Region)
 appDRP = undefined
 
 -- Using appSRP' and appDRp can reduce many needs for explicit region
 -- splitting/etc.
 
-subRegion :: Region -> Offset -> Width -> Possibly Region
-subRegion = R.subRegionP
-  -- aha: not in Parser, is pure.
-
----- maybe useful: ... ---------------------------------------------
-
-subRegionMax :: Region -> Offset -> WC -> Possibly Region
-subRegionMax = niy
-
+appSRP' :: SRP m a -> Region -> PT m ((a,Region),Region)
+appSRP' = undefined
 
 ---- abstractions / using ------------------------------------------
 
-appSRP' :: SRP a -> Region -> Parser ((a,Region),Region)
-appSRP' = undefined
-
-sequenceSRPs :: SRP a -> SRP b -> SRP (a,b)
+sequenceSRPs :: SRP m a -> SRP m b -> SRP m (a,b)
 sequenceSRPs = niy
 
-sequenceDRPs :: DRP a -> DRP b -> DRP (a,b)
+sequenceDRPs :: DRP m a -> DRP m b -> DRP m (a,b)
 sequenceDRPs = niy
   -- useful when intermediate regions unimportant.
 
 -- both these last will correctly determine widths/WCs.
 
 
----- old implem ----------------------------------------------------
-
 ---- internal monadic primitives, not exported -------------------------------
 
 -- | monadic primitive to extract a region of the file Contents
 --
--- This may fail, because the region may be out of range.
+-- This may fail (in the monad), because the region may be out of range.
 readRegion :: Monad m => Region -> PT m Contents
 readRegion r = do
                s <- lift ask
@@ -126,6 +130,8 @@ unsafeReadRegion r = do
                        Left e   -> error (concat e)
                        Right cs -> return cs
 
+---- Region operations (don't need 'PT m') -------------------------
+
 extractRegion :: Region -> Contents -> Possibly Contents
 extractRegion (R st wd) c =
   if st + wd <= clen then
@@ -138,42 +144,57 @@ extractRegion (R st wd) c =
 
   -- FIXME[E1]: inefficient!
 
+-- FIXME: move?
+
+subRegion :: Region -> Offset -> Width -> Possibly Region
+subRegion = R.subRegionP
+  -- aha: not in Parser, is pure.
+
+---- maybe useful: ... ---------------------------------------------
+
+-- | subRegionMax r o wc - extracts the largest subregion from r at offset 0
+--   that satisfies the constraint 'wc':
+subRegionMax :: Region -> Offset -> WC -> Possibly Region
+subRegionMax (R s w) l wc =
+  if l < w && checkWC wc (w-l) then
+    Right (R (s+l) w')
+  else
+    Left ["extractRegion_DynWd_Fail: region cannot hold 'wc'"]
+
+  where
+  w' = case maxWidth wc of
+         MW mw    -> min mw (w-l)
+         MW_NoMax -> w-l
+
 ---- The LR implementation (hidden) ------------------------------
 
-getWidth = niy
-getWC_DRP = niy
 
-mkPrimSRP = niy
-mkPrimDRP = niy
+-- TODO: turn the following into abstract datatypes:
+--   these can only be applied to 'matching' regions
+type SRP m a = (Width, Region -> PT m a)           -- Static Region Parser
+type DRP m a = (WC   , Region -> PT m (a,Region))  -- Dynamic Region Parser
 
--- the implementation of Parser:
-type ParserImplem a = IO a
-                      -- TODO: reader/exception
+srpWidth  :: SRP m a -> Width
+drpWidthC :: DRP m a -> WC
+srpWidth  = fst
+drpWidthC = fst
 
-{-
-Q. Any difference between these:
 
-    mkPrimSRP w p
-    mkPrimDRP (widthToWC w) (fmap (addWidth w) . p)
 
-  - well, the TYPES are different!
--}
+---- Applications:
 
-data RgnParser m a =
-  RP { w :: WidthConstraint, p :: Region -> Parser a}
-
-data SRP a -- = (WC, Region -> Fail m a)           -- Static Region Parser
-data DRP a -- = (WC, Region -> Fail m (a,Region))  -- Dynamic Region Parser
-
----- exploring syntax ----------------------------------------------
-
-test = RP undefined undefined
--- testw = test.w
-testw = w test  -- FIXME
-
+appSRP'' :: Monad m => SRP m a -> Region -> PT m a
+appSRP'' (w,p) r =
+  if R.r_width r == w then
+    p r
+  else
+    error $  -- FIXME: into fail.
+    unwords [ "appSRP': width mismatch. expecting"
+            , show w
+            , "found"
+            , show r
+            ]
 
 ---- utilities -----------------------------------------------------
 
 niy = error "niy"
-
-type Byte = Int
