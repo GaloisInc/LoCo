@@ -1,23 +1,46 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 -- {-# LANGUAGE OverloadedRecordDot #-}
 
-module PEARL where
+module Language.LR.API where
 
--- import Language.PEAR.Types
+-- base pkgs:
+import Data.List
+
+-- transformer pkg:
+-- import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Reader
+import Control.Monad.Trans.Except
+-- import Data.Functor.Identity
+
+-- FIXME: improve these to better fit the use here
+import           Language.PEAR.Types
+import           Language.PEAR.Util
+import qualified Language.PEAR.Region.API as R -- region
+import           Language.PEAR.Region.API(Region(..))
 
 ---- Types ---------------------------------------------------------
 
-type Width  = Int
-type Loc    = Int -- ??
-type Offset = Int -- new, better name
+type Offset = Loc
+  -- Loc - connotes absolute file location
+  -- Offset - connotes relative file/region byte offset
 
-data WidthConstraint
 type WC = WidthConstraint
 
 type Contents = String -- or ByteString
-data Region
+  -- FIXME[E2]: replace String, want constant time extraction!
 
----- The EARL abstraction (exposed) --------------------------------
+
+---- The PT Monad Transformer --------------------------------------
+
+type PT m a = ExceptT Errors (ReaderT Contents m) a
+
+runPT :: PT m a -> Contents -> m (Possibly a)
+runPT m = runReaderT (runExceptT m)
+
+
+
+---- The LR abstraction (exposed) --------------------------------
 
 runParser :: Parser a -> Contents -> Possibly a
 runParser = niy
@@ -25,7 +48,7 @@ runParser = niy
 -- instance Monad Parser where {}
 
 type Parser a = ParserImplem a
-                  -- TODO: reader/exception
+                  -- TODO: Replace with PT m
 
 -- Hmmm: use Parser m type-class instead?
 -- class Monad m => Parser m where {}
@@ -51,13 +74,17 @@ appSRP = undefined
 appDRP :: DRP a -> Region -> Parser ((a,Region),Region)
 appDRP = undefined
 
-subRegion    :: Region -> Offset -> Width -> Parser Region
-subRegion = undefined
+-- Using appSRP' and appDRp can reduce many needs for explicit region
+-- splitting/etc.
 
--- maybe useful: ?
+subRegion :: Region -> Offset -> Width -> Possibly Region
+subRegion = R.subRegionP
+  -- aha: not in Parser, is pure.
 
-subRegionMax :: Region -> Offset -> WC -> Parser Region   -- ??
-subRegionMax = undefined
+---- maybe useful: ... ---------------------------------------------
+
+subRegionMax :: Region -> Offset -> WC -> Possibly Region
+subRegionMax = niy
 
 
 ---- abstractions / using ------------------------------------------
@@ -74,7 +101,44 @@ sequenceDRPs = niy
 
 -- both these last will correctly determine widths/WCs.
 
----- The EARL implementation (hidden) ------------------------------
+
+---- old implem ----------------------------------------------------
+
+---- internal monadic primitives, not exported -------------------------------
+
+-- | monadic primitive to extract a region of the file Contents
+--
+-- This may fail, because the region may be out of range.
+readRegion :: Monad m => Region -> PT m Contents
+readRegion r = do
+               s <- lift ask
+               case extractRegion r s of
+                 Left e   -> throwE e
+                 Right cs -> return cs
+
+-- | monadic primitive to extract a region of the file Contents
+--
+-- can use this if you know the region is good.
+unsafeReadRegion :: Monad m => Region -> PT m Contents
+unsafeReadRegion r = do
+                     s <- lift ask
+                     case extractRegion r s of
+                       Left e   -> error (concat e)
+                       Right cs -> return cs
+
+extractRegion :: Region -> Contents -> Possibly Contents
+extractRegion (R st wd) c =
+  if st + wd <= clen then
+    Right $ genericTake wd $ genericDrop st c
+  else
+    Left ["extractRegion: region extends beyond contents"]
+
+  where
+  clen = genericLength c
+
+  -- FIXME[E1]: inefficient!
+
+---- The LR implementation (hidden) ------------------------------
 
 getWidth = niy
 getWC_DRP = niy
@@ -110,9 +174,6 @@ testw = w test  -- FIXME
 
 ---- utilities -----------------------------------------------------
 
-type Possibly a = Either [String] a
-
 niy = error "niy"
 
-data TBD
 type Byte = Int

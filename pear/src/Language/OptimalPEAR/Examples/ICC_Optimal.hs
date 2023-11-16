@@ -4,6 +4,8 @@
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+  -- FIXME: remove the above!
 
 module Language.OptimalPEAR.Examples.ICC_Optimal where
 
@@ -34,6 +36,9 @@ import           Language.OptimalPEAR.Examples.ICC_V1 hiding (icc)
 
 type TBLR = ( TBL , Region )
 type TBL  = [(Word32,Word32)]
+
+-- FIXME: get this back to compiling:
+{-
 
 [optimal|
 type ICC = { cnt        : Word32
@@ -76,6 +81,7 @@ icc =
 |]
 
 icc :: MonadIO m => FailT m (ICC (FailT m))
+-}
 
 cavityFree' canon_rs r0 =
   case cavities of
