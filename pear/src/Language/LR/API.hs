@@ -90,11 +90,24 @@ appSRP = undefined
 appDRP :: DRP m a -> Region -> PT m ((a,Region),Region)
 appDRP = undefined
 
--- Using appSRP' and appDRp can reduce many needs for explicit region
+-- Using appSRP' and appDRP can reduce many needs for explicit region
 -- splitting/etc.
 
 appSRP' :: SRP m a -> Region -> PT m ((a,Region),Region)
 appSRP' = undefined
+
+appSRP'' :: Monad m => SRP m a -> Region -> PT m a
+appSRP'' (w,p) r =
+  if R.r_width r == w then
+    p r
+  else
+    error $  -- FIXME: into fail.
+    unwords [ "appSRP': width mismatch. expecting"
+            , show w
+            , "found"
+            , show r
+            ]
+
 
 ---- abstractions / using ------------------------------------------
 
@@ -130,7 +143,9 @@ unsafeReadRegion r = do
                        Left e   -> error (concat e)
                        Right cs -> return cs
 
+
 ---- Region operations (don't need 'PT m') -------------------------
+-- FIXME: move to ...?
 
 extractRegion :: Region -> Contents -> Possibly Contents
 extractRegion (R st wd) c =
@@ -144,13 +159,8 @@ extractRegion (R st wd) c =
 
   -- FIXME[E1]: inefficient!
 
--- FIXME: move?
-
 subRegion :: Region -> Offset -> Width -> Possibly Region
 subRegion = R.subRegionP
-  -- aha: not in Parser, is pure.
-
----- maybe useful: ... ---------------------------------------------
 
 -- | subRegionMax r o wc - extracts the largest subregion from r at offset 0
 --   that satisfies the constraint 'wc':
@@ -166,8 +176,8 @@ subRegionMax (R s w) l wc =
          MW mw    -> min mw (w-l)
          MW_NoMax -> w-l
 
----- The LR implementation (hidden) ------------------------------
 
+---- The LR implementation -----------------------------------------
 
 -- TODO: turn the following into abstract datatypes:
 --   these can only be applied to 'matching' regions
@@ -180,20 +190,6 @@ srpWidth  = fst
 drpWidthC = fst
 
 
-
----- Applications:
-
-appSRP'' :: Monad m => SRP m a -> Region -> PT m a
-appSRP'' (w,p) r =
-  if R.r_width r == w then
-    p r
-  else
-    error $  -- FIXME: into fail.
-    unwords [ "appSRP': width mismatch. expecting"
-            , show w
-            , "found"
-            , show r
-            ]
 
 ---- utilities -----------------------------------------------------
 
