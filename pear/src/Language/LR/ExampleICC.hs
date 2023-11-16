@@ -16,6 +16,7 @@ import qualified Language.PEAR.Region.API as R -- region
 import           Language.PEAR.Region.API(Region(..))
 
 ---- ICC -----------------------------------------------------------
+
 icc :: Monad m => Region -> PT m [TED]
 icc rFile =
   do
@@ -30,7 +31,6 @@ icc rFile =
   teds_safe    <- if isCavityFree
                   then return teds
                   else throwE ["teds not safe"]
-
   return teds_safe
 
   where
