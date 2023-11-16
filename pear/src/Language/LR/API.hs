@@ -33,7 +33,7 @@ type Contents = String -- or ByteString
 
 ---- The PT Monad Transformer --------------------------------------
 
--- PT - Parser [monad] Transformer
+-- PT - Parser [Monad] Transformer
 type PT m a = ExceptT Errors (ReaderT Contents m) a
   -- FIXME[R2]: make abstract.
 
@@ -56,60 +56,69 @@ mkPrimDRP :: Monad m => WC    -> (Contents -> Possibly (a,Width)) -> DRP m a
 mkPrimSRP w f =
   (w, \r-> do
            cs <- unsafeReadRegion r
-           case f cs of
-             Left e  -> throwE e
-             Right a -> return a
+           except $ f cs
            -- note that w is checked during apply
   )
 
 mkPrimDRP wc f =
   ( wc
-  , \r-> case subRegionMax r 0 wc of
-           Left e   -> throwE e
-           Right r' ->
-               -- get region that fits in 'wc'
-               do
-               cs <- readRegion r'
-               case f cs of
-                 Left e      -> throwE e
-                 Right (a,w) ->
-                   --  assert (checkWC wc w) -- ??  FIXME!!
-                   return (a, snd $ R.split1 r' w) -- ~obscure
-                   -- FIXME: TODO: return good error msg
+  , \r-> do
+         r' <- except $ subRegionMax r 0 wc
+           -- get region that satisfies the 'wc' constraint
+         cs <- readRegion r'
+         (a,w) <- except $ f cs
+         --  assert (checkWC wc w) -- ??  FIXME!!
+         return (a, snd $ R.split1 r' w) -- ~obscure
+         -- FIXME: TODO: return good error msg
   )
 
 
----- applications --------------------------------------------------
+---- Applying Parsers to Regions -----------------------------------
 
 p @!  x = p `appSRP` x
 p @@! x = p `appDRP` x
 
-appSRP :: SRP m a -> Region -> PT m a
-appSRP = undefined
+appSRP :: Monad m => SRP m a -> Region -> PT m a
+appSRP (w,p) r =
+  if R.r_width r == w then
+    p r
+  else
+    throwE
+      [ unwords [ "appSRP'': width mismatch. expecting"
+                , show w
+                , "found"
+                , show r
+                ]]
 
-appDRP :: DRP m a -> Region -> PT m ((a,Region),Region)
-appDRP = undefined
+appDRP :: Monad m => DRP m a -> Region -> PT m ((a,Region),Region)
+appDRP (wc,p) r0 =
+  do
+  mCheckWC wc r0
+  (a,r1) <- p r0
+  return ((a, r0 `R.regionMinusSuffix` r1), r1)
+
+appDRP' :: Monad m => DRP m a -> Region -> PT m (a,Region)
+appDRP' p r =
+  do
+  ((a,_),r') <- appDRP p r
+  return (a,r')
 
 -- Using appSRP' and appDRP can reduce many needs for explicit region
 -- splitting/etc.
 
-appSRP' :: SRP m a -> Region -> PT m ((a,Region),Region)
-appSRP' = undefined
+appSRP' :: Monad m => SRP m a -> Region -> PT m ((a,Region),Region)
+appSRP' p r =
+  do
+  let w = srpWidth p
+  (r1,r2) <- except (R.split1P r w)
+  a <- p `appSRP` r1
+  return ((a,r1),r2)
 
-appSRP'' :: Monad m => SRP m a -> Region -> PT m a
-appSRP'' (w,p) r =
-  if R.r_width r == w then
-    p r
-  else
-    error $  -- FIXME: into fail.
-    unwords [ "appSRP': width mismatch. expecting"
-            , show w
-            , "found"
-            , show r
-            ]
 
 
 ---- abstractions / using ------------------------------------------
+
+-- these will correctly set appropriate widths/WCs:
 
 sequenceSRPs :: SRP m a -> SRP m b -> SRP m (a,b)
 sequenceSRPs = niy
@@ -117,8 +126,6 @@ sequenceSRPs = niy
 sequenceDRPs :: DRP m a -> DRP m b -> DRP m (a,b)
 sequenceDRPs = niy
   -- useful when intermediate regions unimportant.
-
--- both these last will correctly determine widths/WCs.
 
 
 ---- internal monadic primitives, not exported -------------------------------
@@ -129,13 +136,12 @@ sequenceDRPs = niy
 readRegion :: Monad m => Region -> PT m Contents
 readRegion r = do
                s <- lift ask
-               case extractRegion r s of
-                 Left e   -> throwE e
-                 Right cs -> return cs
+               except $ extractRegion r s
 
 -- | monadic primitive to extract a region of the file Contents
 --
 -- can use this if you know the region is good.
+--   FIXME: this really used (now that Fail/NoFail merged, no use for).
 unsafeReadRegion :: Monad m => Region -> PT m Contents
 unsafeReadRegion r = do
                      s <- lift ask
@@ -176,6 +182,15 @@ subRegionMax (R s w) l wc =
          MW mw    -> min mw (w-l)
          MW_NoMax -> w-l
 
+mCheckWC :: Monad m => WC -> Region -> PT m ()
+mCheckWC wc r = if checkWC wc (r_width r) then
+                  return ()
+                else
+                  throwE [unwords [ "mcheckWC fail:"
+                                  , show wc
+                                  , show r
+                                  ]
+                         ]
 
 ---- The LR implementation -----------------------------------------
 
