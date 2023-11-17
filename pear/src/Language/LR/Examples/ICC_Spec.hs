@@ -13,11 +13,12 @@ import qualified Language.PEAR.Region.API as R -- region
 import           Language.PEAR.Region.API(Region(..))
 
 
----- ICC -----------------------------------------------------------
+---- ICC (PEAR version) --------------------------------------------
 
 -- icc :: Monad m => Region -> PT m (VR Int)
 -- icc :: Monad m => Region -> PT m (VR [(Word32, Word32)])
-icc rFile =
+-- icc :: Monad m => Region -> PT m [TED]
+icc_pear rFile =
   do
   (cnt,rRest)  <- pInt4Bytes                  @! rFile
   (tbl,    _)  <- pManySRPs (cnt.v) pTblEntry @! rRest
@@ -78,30 +79,6 @@ getSubRegion r (loc,sz) = R.subRegionP r (toLoc loc) (toLoc sz)
   -- FIXME: need 'toLoc'?
 
 
----- The optimal 'inspiration --------------------------------------
-{-
-[optimal|
-icc : ICC
-icc rFile =
-  { (cnt,rfoCnt) = <| pWord32               @@ rFile  |>,
-    (tbl,     _) = <| pMany cnt.v pTblEntry @@ rfoCnt |>,
-    rsTeds       = <| failP $
-                       mapM (getSubRegion rFile) tbl.v |>,
-    teds         = <| mapM pTED'      @  rsTeds |>,
-
-    teds_safe    = <| if isCavityFree
-                      then return teds
-                      else throwE' ["teds not safe"]
-                   |>,
-
-    isCavityFree = <| verboseComplement rFile crFile |>,
-    crFile       = <| makeCanonicalRegions
-                        (cnt.r : tbl.r : rsTeds)
-                   |>,
-  }
-|]
-
--}
 
 
 ---- demo friendly parsing library ---------------------------------

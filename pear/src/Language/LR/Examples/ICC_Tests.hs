@@ -11,7 +11,7 @@ import           Language.LR.API
 -- import           Language.PEAR.Util
 
 -- runTest :: Monad m => Contents -> m (Possibly [TED])
-runTest s = runPT s icc
+runTest s = runPT s icc_pear
 
 runtestsG = mapM_ (\i -> runTest i >>= print) ds
 

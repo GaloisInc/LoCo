@@ -62,6 +62,7 @@ library
         -- Language.LR.Implem
         Language.LR.Examples.ICC_Spec
         Language.LR.Examples.ICC_Tests
+        Language.LR.Examples.ICC_Optimal
 
     build-depends:
         base ^>=4.16.4.0,
