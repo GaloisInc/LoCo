@@ -17,6 +17,7 @@ module Language.LR.API
   , mkPrimDRP
 
   -- applying primitives to regions:
+  , (@$)
   , (@!)
   , (@@!)
   , appSRP
@@ -122,13 +123,24 @@ mkPrimDRP wc f =
 
 ---- Applying Parsers to Regions -----------------------------------
 
+-- Using appSRP' and appDRP can reduce many needs for explicit region
+-- splitting/etc.
+
+-- naming conventions?
+--  - @ for apply.
+--  - @@ for DRP apply
+--  - maybe:
+--     _$ - throwing away region, more like $
+--     _! - giving back region,
+
+p @$ x  = p `appSRP` x  -- name:
 p @!  x = p `appSRP'` x
 p @@! x = p `appDRP` x
 
-appSRP :: Monad m => SRP m a -> Region -> PT m a
+appSRP :: Monad m => SRP m a -> Region -> PT m (VR a)
 appSRP (w,p) r =
   if R.r_width r == w then
-    p r
+    (flip VR r) <$> p r
   else
     throwE
       [ unwords [ "appSRP'': width mismatch. expecting"
@@ -137,6 +149,14 @@ appSRP (w,p) r =
                 , show r
                 ]
       ]
+
+appSRP' :: Monad m => SRP m a -> Region -> PT m (VR a, Region)
+appSRP' p r =
+  do
+  let w = srpWidth p
+  (r1,r2) <- except (R.split1P r w)
+  a <- p `appSRP` r1
+  return (a, r2)
 
 appDRP :: Monad m => DRP m a -> Region -> PT m (VR a,Region)
 appDRP (wc,p) r0 =
@@ -150,17 +170,6 @@ appDRP' p r =
   do
   (VR a _,r') <- appDRP p r
   return (a,r')
-
--- Using appSRP' and appDRP can reduce many needs for explicit region
--- splitting/etc.
-
-appSRP' :: Monad m => SRP m a -> Region -> PT m (VR a, Region)
-appSRP' p r =
-  do
-  let w = srpWidth p
-  (r1,r2) <- except (R.split1P r w)
-  a <- p `appSRP` r1
-  return (VR a r1, r2)
 
 -- | VR - Value Region pair
 data VR a = VR {v :: a, r :: Region}
@@ -198,7 +207,7 @@ pManySRPs i p =
   ( fromIntegral i * widthSingle
   , \r-> do
          let rs = R.splitWidths r (replicate i widthSingle)
-         mapM (appSRP p) rs
+         mapM (fmap v . appSRP p) rs
   )
   where
   widthSingle = srpWidth p

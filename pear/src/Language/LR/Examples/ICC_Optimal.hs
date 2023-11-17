@@ -18,7 +18,7 @@ import           Thunk.Vector
 import           Language.LR.Examples.ICC_Spec
 import           Language.LR.API
 -- import           Language.PEAR.Util
--- import qualified Language.PEAR.Region.API as R -- region
+import qualified Language.PEAR.Region.API as R -- region
 import           Language.PEAR.Region.API(Region(..))
 
 
@@ -26,43 +26,27 @@ import           Language.PEAR.Region.API(Region(..))
 
 -- Misc
 --  - Aha: OverloadedRecordDot conflicts with Optimal. ?
---  - no support for nested tuple patterns?
+--  - no support for nested tuple patterns: (?)
 --      , ((a,b),c)    = <| return ((1,2),3) |>
+--  - no support for '_' bindings.
 
 [optimal|
-type ICC = { cnt       : Int
-           , cnt'      : VR Int
+type ICC = { cnt       : VR Int
            , rRest     : Region
+           , teds      : [TED]
+           , teds_safe : [TED]
            }
 
 icc : Region -> ICC
 icc rFile =
-  { (cnt',rRest) = <| pInt4Bytes @! rFile |>
-  , cnt = <| return (v cnt') |>
+  { (cnt,rRest) = <| pInt4Bytes                  @! rFile          |>
+  , tbl         = <| pManySRPs (v cnt) pTblEntry @$ rRest          |>
+  , rsTeds      = <| except $ mapM (getSubRegion rFile) (v tbl)    |>
+  , teds        = <| mapM applyPTED rsTeds                         |>
+  , crsFile     = <| makeCanonicalRegions (r cnt : r tbl : rsTeds) |>
+  , isCavityFree= <| hasNoCavities $ R.complementCRs rFile crsFile |>
+  , teds_safe   = <| if isCavityFree
+                       then return teds
+                       else throwE ["teds not safe"] |>
   }
 |]
-
--- Original brainstorming:
-{-
-[optimal|
-icc : ICC
-icc rFile =
-  { (cnt,rfoCnt) = <| pWord32               @@ rFile  |>,
-    (tbl,     _) = <| pMany cnt.v pTblEntry @@ rfoCnt |>,
-    rsTeds       = <| failP $
-                       mapM (getSubRegion rFile) tbl.v |>,
-    teds         = <| mapM pTED'      @  rsTeds |>,
-
-    teds_safe    = <| if isCavityFree
-                      then return teds
-                      else throwE' ["teds not safe"]
-                   |>,
-
-    isCavityFree = <| verboseComplement rFile crFile |>,
-    crFile       = <| makeCanonicalRegions
-                        (cnt.r : tbl.r : rsTeds)
-                   |>,
-  }
-|]
-
--}
