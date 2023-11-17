@@ -1,7 +1,44 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 
 module Language.LR.API
-  ( module Language.LR.API
+  (
+  -- types:
+    PT
+  , SRP
+  , DRP
+     -- FIXME: make the above 3 all abstract!
+  , VR(..)
+
+  -- runnning the PT monad transformer:
+  , runPT
+
+  -- creating parsing primitives:
+  , mkPrimSRP
+  , mkPrimDRP
+
+  -- applying primitives to regions:
+  , (@!)
+  , (@@!)
+  , appSRP
+  , appDRP
+  , appDRP'
+  , appSRP'
+
+  -- parsing combinators:
+  , pairSRPs
+  , sequenceSRPs
+  , sequenceDRPs
+  , pManySRPs
+
+  -- inspecting SRP/DRP parsers (Q. do we want all these?)
+  , srpWidth
+  , drpWidthC
+
+  -- more Region operators (beyond Language.PEAR.Region.API):
+  , subRegion
+  , subRegionMax
+
+  -- exposing exception monad operators:
   , except
   , throwE
   )
@@ -93,38 +130,52 @@ appSRP (w,p) r =
                 , show r
                 ]]
 
-appDRP :: Monad m => DRP m a -> Region -> PT m ((a,Region),Region)
+appDRP :: Monad m => DRP m a -> Region -> PT m (VR a,Region)
 appDRP (wc,p) r0 =
   do
   mCheckWC wc r0
   (a,r1) <- p r0
-  return ((a, r0 `R.regionMinusSuffix` r1), r1)
+  return (VR a (r0 `R.regionMinusSuffix` r1), r1)
 
 appDRP' :: Monad m => DRP m a -> Region -> PT m (a,Region)
 appDRP' p r =
   do
-  ((a,_),r') <- appDRP p r
+  (VR a _,r') <- appDRP p r
   return (a,r')
 
 -- Using appSRP' and appDRP can reduce many needs for explicit region
 -- splitting/etc.
 
-appSRP' :: Monad m => SRP m a -> Region -> PT m ((a,Region),Region)
+appSRP' :: Monad m => SRP m a -> Region -> PT m (VR a, Region)
 appSRP' p r =
   do
   let w = srpWidth p
   (r1,r2) <- except (R.split1P r w)
   a <- p `appSRP` r1
-  return ((a,r1),r2)
+  return (VR a r1, r2)
 
-
+-- | VR - Value Region pair
+data VR a = VR {v :: a, r :: Region}
+            deriving (Eq,Ord,Read,Show)
 
 ---- abstractions / using ------------------------------------------
 
 -- these will correctly set appropriate widths/WCs:
 
-pairSRPs :: SRP m a -> SRP m b -> SRP m (a,b)
-pairSRPs = niy
+pairSRPs :: Monad m => SRP m a -> SRP m b -> SRP m (a,b)
+pairSRPs pa pb =
+  ( wc
+  , \rc -> case R.split1P rc wc of
+             Left ss       -> error (unlines ss)
+                              -- should never fail.
+             Right (ra,rb) ->
+                 do
+                 a <- (snd pa) ra
+                 b <- (snd pb) rb
+                 return (a,b)
+  )
+  where
+  wc = srpWidth pa + srpWidth pb
 
 sequenceSRPs :: [SRP m a] -> SRP m [a]
 sequenceSRPs = niy
