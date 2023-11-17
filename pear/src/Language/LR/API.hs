@@ -78,8 +78,13 @@ type Contents = String -- or ByteString
 type PT m a = ExceptT Errors (ReaderT Contents m) a
   -- FIXME[R2]: make abstract.
 
-runPT :: PT m a -> Contents -> m (Possibly a)
-runPT m = runReaderT (runExceptT m)
+runPT' :: PT m a -> Contents -> m (Possibly a)
+runPT' m = runReaderT (runExceptT m)
+
+runPT :: Monad m => Contents -> (Region -> PT m a) -> m (Possibly a)
+runPT contents rp = runPT' (rp globalRegion) contents
+                    where
+                    globalRegion = R 0 (toLoc $ length contents)
 
 
 ---- primitives ----------------------------------------------------
@@ -96,7 +101,7 @@ mkPrimDRP :: Monad m => WC    -> (Contents -> Possibly (a,Width)) -> DRP m a
 mkPrimSRP w f =
   (w, \r-> do
            cs <- unsafeReadRegion r
-           except $ f cs
+           except $ elaboratePossibly ["at region " ++ R.ppRegion r] $ f cs
            -- note that w is checked during apply
   )
 
@@ -106,7 +111,9 @@ mkPrimDRP wc f =
          r' <- except $ subRegionMax r 0 wc
            -- get region that satisfies the 'wc' constraint
          cs <- readRegion r'
-         (a,w) <- except $ f cs
+         (a,w) <- except
+                $ elaboratePossibly ["at region " ++ R.ppRegion r']
+                $ f cs
          --  assert (checkWC wc w) -- ??  FIXME!!
          return (a, snd $ R.split1 r' w) -- ~obscure
          -- FIXME: TODO: return good error msg
@@ -128,7 +135,8 @@ appSRP (w,p) r =
                 , show w
                 , "found"
                 , show r
-                ]]
+                ]
+      ]
 
 appDRP :: Monad m => DRP m a -> Region -> PT m (VR a,Region)
 appDRP (wc,p) r0 =

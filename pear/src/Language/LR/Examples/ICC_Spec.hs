@@ -4,6 +4,7 @@ module Language.LR.Examples.ICC_Spec where
 
 -- base pkgs:
 import           Data.Word
+import           Text.Read
 
 -- local modules:
 import           Language.LR.API
@@ -14,7 +15,8 @@ import           Language.PEAR.Region.API(Region(..))
 
 ---- ICC -----------------------------------------------------------
 
-icc :: Monad m => Region -> PT m [TED]
+-- icc :: Monad m => Region -> PT m (VR Int)
+-- icc :: Monad m => Region -> PT m (VR [(Word32, Word32)])
 icc rFile =
   do
   (cnt,rRest)  <- pInt4Bytes                  @! rFile
@@ -29,6 +31,7 @@ icc rFile =
   teds_safe    <- if isCavityFree
                   then return teds
                   else throwE ["teds not safe"]
+  -- return teds
   return teds_safe
 
   where
@@ -61,6 +64,7 @@ hasNoCavities cavities =
 ---- TED parsing ---------------------------------------------------
 
 newtype TED = TED String
+              deriving (Eq,Ord,Read,Show)
 
 -- | very adhoc, just nab the string contained in the whole region:
 applyPTED r = pTED (r_width r) `appSRP` r
@@ -102,13 +106,18 @@ icc rFile =
 
 ---- demo friendly parsing library ---------------------------------
 
+readP :: Read a => String -> Possibly a
+readP s = case readEither s of
+            Left msg -> Left [msg]
+            Right a  -> Right a
+
 -- CAVEAT: these are demo-friendly (easy to write & view) but WRONG:
 
 pInt4Bytes :: Monad m => SRP m Int
-pInt4Bytes = mkPrimSRP 4  (Right . (read :: String -> Int))
+pInt4Bytes = mkPrimSRP 4 readP
 
 pWord32 :: Monad m => SRP m Word32
-pWord32 = mkPrimSRP 4 (Right . (read :: String -> Word32))
+pWord32 = mkPrimSRP 4 readP
 
 pTwoWord32s :: Monad m => SRP m (Word32,Word32)
 pTwoWord32s = pairSRPs pWord32 pWord32
