@@ -96,8 +96,6 @@ necessary, even though `y` mentions `x`. A side effect of `Optimal`'s efforts to
 share computation mean that declarations in generated Haskell code are
 automatically topologically reordered.
 
-TODO: well-typedness?
-
 TODO: commutative monads?
 
 This generates a few functions:
@@ -134,9 +132,9 @@ workWithFoo =
   do
     f <- foo
 
-    let xThunk :: Thunked m Bool
+    let xThunk :: Thunked IO Bool
         xThunk = x f
-        yThunk :: Thunked m Char
+        yThunk :: Thunked IO Char
         yThunk = y f
         
     force xThunk >>= print
@@ -197,8 +195,9 @@ Since `Optimal` is embedded in Haskell regardless of the source language,
 though, the language and its `Exp` representation need to meet the typing
 requirements of `Optimal`.
 
+## Typing Rules
 
-## Expressions
+### Expressions
 
 Expression-binding looks like this:
 ```
@@ -215,12 +214,12 @@ repeatedly above - it is the trivial monadic embedding for computations that
 don't require monadic facilities.
 
 
-## Vectors
+### Vectors
 
 TODO
 
 
-## Tuple Patterns
+### Tuple Patterns
 
 TODO
 
