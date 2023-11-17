@@ -53,8 +53,6 @@ import           Control.Exception (assert)
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Except
--- import        Control.Monad.IO.Class
--- import        Data.Functor.Identity
 
 -- FIXME: improve these to better fit the use here
 import           Language.PEAR.Types
