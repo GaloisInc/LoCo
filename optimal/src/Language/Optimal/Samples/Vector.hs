@@ -23,7 +23,7 @@ sampleLength :: Applicative f => f Int
 sampleLength = pure 5
 
 [optimal|
-type Str = { chars : [Char] }
+type Str = { chars : Vec<Char> }
 
 -- Replication from a thunked length
 replicateStrThunked : Str

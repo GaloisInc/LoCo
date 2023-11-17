@@ -81,6 +81,7 @@ data TypeDecl = TypeDecl
 data Type
   = Alias Symbol
   | List Type
+  | Vec Type
   | Tuple [Type]
   | Arrow Type Type
   | Rec Symbol (Env Type)

@@ -290,7 +290,8 @@ compileOptimalTypeDecl tyEnv m TypeDecl {..} =
     -- doesn't require a type synonym
     Alias _alias -> (: []) <$> tySynD (name tdName) [] (go ty)
     -- Vectors require type parameters, so their declarations do too
-    List _inner -> (: []) <$> tySynD (name tdName) [PlainTV m ()] (go ty)
+    Vec _inner -> (: []) <$> tySynD (name tdName) [PlainTV m ()] (go ty)
+    List _inner -> (: []) <$> tySynD (name tdName) [] (go ty)
     Tuple ts -> undefined
     Arrow t1 t2 -> undefined
     Rec nm fields -> compileOptimalRecordDecl tyEnv m (name nm) fields
@@ -316,7 +317,8 @@ compileOptimalType :: Env Optimal.Type -> Name -> Optimal.Type -> Q TH.Type
 compileOptimalType tyEnv m ty =
   case ty of
     Alias alias -> conT (name alias)
-    List t -> appT (appT (conT "Vector") (varT m)) (go t)
+    Vec t -> appT (appT (conT "Vector") (varT m)) (go t)
+    List t -> appT listT (go t)
     Tuple ts -> undefined
     Arrow t1 t2 -> undefined
     Rec nm _fields -> appT (conT (name nm)) (varT m)

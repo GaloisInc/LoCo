@@ -13,6 +13,7 @@ expandType tyEnv ty =
     Arrow t1 t2 -> Arrow t1 (go t2)
     Tuple ts -> Tuple (map go ts)
     List t -> List (go t)
+    Vec t -> Vec (go t)
     Rec s env -> Rec s (go <$> env)
     App t1 t2 -> App (go t1) (go t2)
   where

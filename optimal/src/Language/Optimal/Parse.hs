@@ -118,6 +118,7 @@ parseOptimalType name = t >>= t'
     t =
       choice
         [ List <$> bracketed go,
+          Vec <$> (ignore (chunk "Vec") >> careted go),
           Tuple <$> parenthesized (sepBy1 go (ignore (single ','))),
           Rec name <$> parseOptimalRecordType name,
           Alias <$> parseTyName
@@ -136,6 +137,7 @@ parseOptimalType name = t >>= t'
     go = parseOptimalType name
 
     bracketed = between (ignore (single '[')) (ignore (single ']'))
+    careted = between (ignore (single '<')) (ignore (single '>'))
 
 parseOptimalRecordType :: Symbol -> Parser e (Env Type)
 parseOptimalRecordType name = parseBindings parseVarName (single ':') (parseOptimalType name)

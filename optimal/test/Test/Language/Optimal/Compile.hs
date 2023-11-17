@@ -28,7 +28,8 @@ typeTests =
   testGroup
     "types"
     [ testSuccess "int" oInt "Int",
-      testSuccess "list int" (List oInt) "Vector m Int",
+      testSuccess "vec int" (Vec oInt) "Vector m Int",
+      testSuccess "list int" (List oInt) "[Int]",
       testSuccess "(int, bool)" (Tuple [oInt, oBool]) "(Int, Bool)",
       testSuccess "int -> bool" (Arrow oInt oBool) "Int -> Bool",
       testSuccess "record" (Rec "Foo" [("x", oInt)]) "Foo m"
@@ -41,7 +42,8 @@ thunkedTypeTests =
   testGroup
     "thunked types"
     [ testSuccess "int" oInt "Thunked m Int",
-      testSuccess "list int" (List oInt) "Thunked m (Vector m Int)",
+      testSuccess "vec int" (Vec oInt) "Thunked m (Vector m Int)",
+      testSuccess "list int" (List oInt) "Thunked m [Int]",
       testSuccess "(int, bool)" (Tuple [oInt, oBool]) "Thunked m (Int, Bool)",
       testSuccess "int -> bool" (Arrow oInt oBool) "Int -> Thunked m Bool",
       testSuccess "record" (Rec "Foo" [("x", oInt)]) "Thunked m (Foo m)"

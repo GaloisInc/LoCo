@@ -67,8 +67,8 @@ type Entry = { eBytes : Source }
 
 type ICC = {
   iccLen : Int,
-  iccHeaders : [Header],
-  iccEntries : [Entry],
+  iccHeaders : Vec<Header>,
+  iccEntries : Vec<Entry>,
 }
 
 parseHeader : Source -> Region -> Header
