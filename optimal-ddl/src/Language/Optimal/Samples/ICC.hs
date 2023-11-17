@@ -64,7 +64,7 @@ mkOptimalICC source = {
 }
 
 
-type OptimalTagTable = { ttLen : UInt32, ttElems : [OptimalTag] }
+type OptimalTagTable = { ttLen : UInt32, ttElems : Vec<OptimalTag> }
 
 mkOptimalTagTable : Input -> OptimalTagTable
 mkOptimalTagTable input = {
