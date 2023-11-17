@@ -55,7 +55,7 @@ library
         Language.OptimalPEAR.Examples.ICC_V1
         Language.OptimalPEAR.Examples.ICC_Optimal
         Language.OptimalPEAR.Examples.Trivial
-        -- Language.OptimalPEAR.Examples.ICC_Demo
+        Language.OptimalPEAR.Examples.ICC_Demo
         Language.OptimalPEAR.Examples.ICC_Inputs
 
         Language.LR.API

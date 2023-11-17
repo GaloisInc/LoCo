@@ -37,9 +37,6 @@ import           Language.OptimalPEAR.Examples.ICC_V1 hiding (icc)
 type TBLR = ( TBL , Region )
 type TBL  = [(Word32,Word32)]
 
--- FIXME: get this back to compiling:
-{-
-
 [optimal|
 type ICC = { cnt        : Word32
            , teds       : [TED]
@@ -81,7 +78,6 @@ icc =
 |]
 
 icc :: MonadIO m => FailT m (ICC (FailT m))
--}
 
 cavityFree' canon_rs r0 =
   case cavities of
