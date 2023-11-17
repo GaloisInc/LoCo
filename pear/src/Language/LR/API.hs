@@ -173,7 +173,7 @@ data VR a = VR {v :: a, r :: Region}
 pairSRPs :: Monad m => SRP m a -> SRP m b -> SRP m (a,b)
 pairSRPs pa pb =
   ( wc
-  , \rc -> case R.split1P rc wc of
+  , \rc -> case R.split1P rc (srpWidth pa) of
              Left ss       -> error (unlines ss)
                               -- should never fail.
              Right (ra,rb) ->
