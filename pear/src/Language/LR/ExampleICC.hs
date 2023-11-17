@@ -21,13 +21,13 @@ import           Language.PEAR.Region.API(Region(..))
 icc :: Monad m => Region -> PT m [TED]
 icc rFile =
   do
-  (cnt,rfoCnt) <- pInt4Bytes                    @! rFile
-  (tbl,     _) <- pManySRPs (val cnt) pTblEntry @! rfoCnt
+  (cnt,rRest)  <- pInt4Bytes                  @! rFile
+  (tbl,    _)  <- pManySRPs (cnt.v) pTblEntry @! rRest
   rsTeds       <- except
-                $ mapM (getSubRegion rFile) (val tbl)
+                $ mapM (getSubRegion rFile) tbl.v
 
   crsFile      <- makeCanonicalRegions
-                    (rgn cnt : rgn tbl : rsTeds)
+                    (cnt.r : tbl.r : rsTeds)
   isCavityFree <- hasNoCavities $ R.complementCRs rFile crsFile
   teds         <- mapM applyPTED rsTeds
   teds_safe    <- if isCavityFree
@@ -38,18 +38,29 @@ icc rFile =
   where
   pTblEntry = pTwoWord32s
 
----- syntactical things --------------------------------------------
--- FIXME: syntax
---   use 'x.v' and 'x.r' syntax with your 'special pairs'
--- for now:
-val = fst
-rgn = snd
 
+---- syntactical things --------------------------------------------
+
+-- For more 'user friendly' variations, see
+--    pear/src/Language/OptimalPEAR/Examples/ICC_Optimal.hs
+
+makeCanonicalRegions :: Monad m => [Region] -> PT m R.CanonicalRegions
 makeCanonicalRegions xs = except $ R.regionsDisjoint_Possibly xs
 
-hasNoCavities _cr = return True
-  -- FIXME!
-  -- see pear/src/Language/OptimalPEAR/Examples/ICC_Optimal.hs
+hasNoCavities :: Monad m => R.CanonicalRegions -> m Bool
+hasNoCavities cavities =
+  case cavities of
+    R.CR [] -> return True
+    R.CR _  -> return False
+               {-
+               -- NOTE: only side-effect in icc
+               --  - rather fail?
+               liftIO $ mapM_ putStrLn
+                      $ ["Cavities present:"
+                        , ""
+                        ] ++ map ((" "++) . R.ppRegion) rs
+               -}
+
 
 ---- TED parsing ---------------------------------------------------
 
@@ -64,7 +75,7 @@ applyPTED r = pTED (r_width r) `appSRP` r
 getSubRegion r (loc,sz) = R.subRegionP r (toLoc loc) (toLoc sz)
   -- note: different calls could overlap.
   -- note: we might check here that all fall into right section
-
+  -- FIXME: need 'toLoc'?
 
 ---- The optimal 'inspiration --------------------------------------
 {-
@@ -92,9 +103,9 @@ icc rFile =
 -}
 
 
----- libraries -----------------------------------------------------
+---- demo friendly parsing library ---------------------------------
 
--- FIXME: these are demo-friendly but WRONG:
+-- CAVEAT: these are demo-friendly (easy to write & view) but WRONG:
 
 pInt4Bytes :: Monad m => SRP m Int
 pInt4Bytes = mkPrimSRP 4  (Right . (read :: String -> Int))
