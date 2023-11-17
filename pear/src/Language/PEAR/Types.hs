@@ -21,14 +21,7 @@ infixr 0 -->
 
 s --> a = (s,a)
 
-
----- Constrained Regions --------------------------------------------------
-
--- from parser's view: constraints are all mapped down to ConstrainedRegion
-
--- | Regions : as yet to be fully determined (not fully constrained)
-type ConstrainedRegion = (Loc, WidthConstraint)
-  -- FIXME: Unused.
+---- WidthConstraints ----------------------------------------------
 
 data MaxWidth =
     MW Width    -- FIXME: change name!
@@ -36,8 +29,10 @@ data MaxWidth =
   deriving (Eq,Ord,Read,Show,Generic)
   deriving Arbitrary via (GenericArbitrary MaxWidth)
               
+type WC = WidthConstraint
+
 data WidthConstraint =
-  WC { minWidth :: Loc, maxWidth :: MaxWidth}
+  WC { minWidth :: Offset, maxWidth :: MaxWidth}
   deriving (Eq,Read,Show,Generic)
   deriving Arbitrary via (GenericArbitrary WidthConstraint)
 
@@ -46,8 +41,6 @@ data WidthConstraint =
   --    maxWidth x == MW w  ==>  minWidth x <= w
 
   -- FIXME[R2]: create smart constructor enforcing this.
-
-
 
 
 checkWC :: WidthConstraint -> Width -> Bool

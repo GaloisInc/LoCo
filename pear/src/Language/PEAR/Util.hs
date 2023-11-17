@@ -16,9 +16,12 @@ stub = error "stub"
 
 ---- types universal to project ----------------------------------------------
 
--- | file locations (and widths too): unsigned.
-type Loc = Word64
-type Width = Loc
+-- | file locations, widths, offsets: unsigned.
+--   the distinction may not be perfect, but note the 'connotations' below:
+
+type Loc = Word64  -- generally absolute file offset/location
+type Offset = Loc  -- generally relative byte offset in file/region
+type Width  = Loc  -- generally width of a field/region/etc.
 
 toLoc :: Integral a => a -> Loc
 toLoc = fromIntegral

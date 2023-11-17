@@ -31,12 +31,6 @@ import           Language.PEAR.Region.API(Region(..))
 
 ---- Types ---------------------------------------------------------
 
-type Offset = Loc
-  -- Loc - connotes absolute file location
-  -- Offset - connotes relative file/region byte offset
-
-type WC = WidthConstraint
-
 type Contents = String -- or ByteString
   -- FIXME[E2]: replace String, want constant time extraction!
 
@@ -49,6 +43,7 @@ type PT m a = ExceptT Errors (ReaderT Contents m) a
 
 runPT :: PT m a -> Contents -> m (Possibly a)
 runPT m = runReaderT (runExceptT m)
+
 
 ---- primitives ----------------------------------------------------
 
@@ -186,9 +181,11 @@ extractRegion (R st wd) c =
 
   -- FIXME[E1]: inefficient!
 
+-- exposed:
 subRegion :: Region -> Offset -> Width -> Possibly Region
 subRegion = R.subRegionP
 
+-- exposed:
 -- | subRegionMax r o wc - extracts the largest subregion from r at offset 0
 --   that satisfies the constraint 'wc':
 subRegionMax :: Region -> Offset -> WC -> Possibly Region

@@ -15,6 +15,7 @@ import           Language.PEAR.Util
 import qualified Language.PEAR.Region.API as R -- region
 import           Language.PEAR.Region.API(Region(..))
 
+
 ---- ICC -----------------------------------------------------------
 
 icc :: Monad m => Region -> PT m [TED]
@@ -24,6 +25,7 @@ icc rFile =
   (tbl,     _) <- pManySRPs (val cnt) pTblEntry @! rfoCnt
   rsTeds       <- except
                 $ mapM (getSubRegion rFile) (val tbl)
+
   crsFile      <- makeCanonicalRegions
                     (rgn cnt : rgn tbl : rsTeds)
   isCavityFree <- hasNoCavities $ R.complementCRs rFile crsFile
