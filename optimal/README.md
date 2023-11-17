@@ -56,10 +56,10 @@ type Bar = Foo
 |]
 ```
 
-`Optimal` also supports vector types, denoted as `[<typename>]`:
+`Optimal` also supports vector types, denoted as `Vec<ty>`:
 ```hs
 [optimal|
-type Bitvec = [Bool]
+type Bitvec = Vec<Bool>
 |]
 ```
 
@@ -269,6 +269,6 @@ TYIDENT ::= [A-Z][a-z0-9_]*
 TYPE
   ::= TYIDENT
     | '{' (VARIDENT ':' TYPE ',')+ '}'
-    | [TYIDENT]
+    | 'Vec' '<' TYIDENT '>'
 ```
 
