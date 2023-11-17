@@ -294,6 +294,7 @@ compileOptimalTypeDecl tyEnv m TypeDecl {..} =
     Tuple ts -> undefined
     Arrow t1 t2 -> undefined
     Rec nm fields -> compileOptimalRecordDecl tyEnv m (name nm) fields
+    App t1 t2 -> (: []) <$> tySynD (name tdName) [] (go ty)
   where
     ty = expandType tyEnv tdType
     go = compileOptimalType tyEnv m
@@ -319,6 +320,7 @@ compileOptimalType tyEnv m ty =
     Tuple ts -> undefined
     Arrow t1 t2 -> undefined
     Rec nm _fields -> appT (conT (name nm)) (varT m)
+    App t1 t2 -> appT (go t1) (go t2)
   where
     go = compileOptimalType tyEnv m
 

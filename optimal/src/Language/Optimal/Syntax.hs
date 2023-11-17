@@ -84,6 +84,7 @@ data Type
   | Tuple [Type]
   | Arrow Type Type
   | Rec Symbol (Env Type)
+  | App Type Type
   deriving (Eq, Show)
 
 type Symbol = Text

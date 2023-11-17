@@ -70,6 +70,7 @@ typeTests =
       testSuccess "tuple" "(Int,Foo)" (Tuple [Alias "Int", Alias "Foo"]),
       testSuccess "list of tuple" "[(Int,Foo)]" (List (Tuple [Alias "Int", Alias "Foo"])),
       testSuccess "tuple of list" "([Int],Foo)" (Tuple [List (Alias "Int"), Alias "Foo"]),
+      testSuccess "tyapp" "List Int" (App (Alias "List") int),
       testFailure "lowercase type" "int",
       testFailure "unterminated record" "{ foo : Int "
     ]

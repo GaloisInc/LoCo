@@ -95,6 +95,7 @@ Type -> <str>
       | { <str>: Type }
       | [Type]
       | (Type,...)
+      | Type Type
       | Type "->" Type
 
 -->
@@ -107,6 +108,7 @@ T -> <str>
    | (Type,...)
 
 T' -> "->" Type
+    | Type
     | epsilon
 -}
 parseOptimalType :: Symbol -> Parser e Type
@@ -126,6 +128,7 @@ parseOptimalType name = t >>= t'
     t' ty =
       choice
         [ ignore (chunk "->") >> Arrow ty <$> go,
+          App ty <$> go,
           pure ty
         ]
         <* ws
