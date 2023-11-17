@@ -1,16 +1,12 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-  -- FIXME!
-
-module Language.LR.ExampleICC where
+module Language.LR.Examples.ICC_Spec where
 
 -- base pkgs:
 import           Data.Word
 
 -- local modules:
 import           Language.LR.API
-import           Language.PEAR.Types
 import           Language.PEAR.Util
 import qualified Language.PEAR.Region.API as R -- region
 import           Language.PEAR.Region.API(Region(..))
@@ -76,6 +72,7 @@ getSubRegion r (loc,sz) = R.subRegionP r (toLoc loc) (toLoc sz)
   -- note: different calls could overlap.
   -- note: we might check here that all fall into right section
   -- FIXME: need 'toLoc'?
+
 
 ---- The optimal 'inspiration --------------------------------------
 {-
