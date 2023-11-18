@@ -20,14 +20,11 @@ import           Language.PEAR.Region.API(Region(..))
 -- icc :: Monad m => Region -> PT m [TED]
 icc_pear rFile =
   do
-  (cnt,rRest)  <- pInt4Bytes                  @! rFile
-  (tbl,    _)  <- pManySRPs (cnt.v) pTblEntry @! rRest
-  rsTeds       <- except
-                $ mapM (getSubRegion rFile) tbl.v
-
+  (cnt,rRest)  <- pInt4Bytes                  @!  rFile
+  tbl          <- pManySRPs (cnt.v) pTblEntry @!- rRest
+  rsTeds       <- except $ mapM (getSubRegion rFile) tbl.v
   teds         <- mapM applyPTED rsTeds
-  crsFile      <- makeCanonicalRegions
-                    (cnt.r : tbl.r : rsTeds)
+  crsFile      <- makeCanonicalRegions (cnt.r : tbl.r : rsTeds)
   isCavityFree <- hasNoCavities $ R.complementCRs rFile crsFile
   teds_safe    <- if isCavityFree
                   then return teds
