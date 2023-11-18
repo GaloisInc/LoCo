@@ -57,7 +57,8 @@ library
         Language.OptimalPEAR.Examples.Trivial
         Language.OptimalPEAR.Examples.ICC_Demo
         Language.OptimalPEAR.Examples.ICC_Inputs
-
+        Language.OptimalPEAR.RunOptimal
+        
         Language.LR.API
         -- Language.LR.Implem
         Language.LR.Examples.ICC_Spec
