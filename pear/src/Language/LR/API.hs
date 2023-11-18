@@ -8,9 +8,11 @@ module Language.LR.API
   , DRP
      -- FIXME: make the above 3 all abstract!
   , VR(..)
+  , Contents
 
   -- runnning the PT monad transformer:
   , runPT
+  , runPT'
 
   -- creating parsing primitives:
   , mkPrimSRP
