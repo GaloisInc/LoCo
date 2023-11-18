@@ -3,12 +3,15 @@
 module Language.LR.API
   (
   -- types:
-    PT
+    PT      -- FIXME: make abstract!
   , SRP
   , DRP
-     -- FIXME: make the above 3 all abstract!
   , VR(..)
   , Contents
+
+  -- what *is* exposed from SRP/DRP parsers:
+  , srpWidth
+  , drpWidthC
 
   -- runnning the PT monad transformer:
   , runPT
@@ -27,9 +30,9 @@ module Language.LR.API
   , (@!)
   , (@!-)
   , (@@!)
-  , appSRP
   , appDRP
   , appDRP'
+  , appSRP
   , appSRP'
 
   -- parsing combinators:
@@ -38,10 +41,6 @@ module Language.LR.API
   , pairDRPs
   , sequenceDRPs
   , pManySRPs
-
-  -- inspecting SRP/DRP parsers (Q. do we want all these?)
-  , srpWidth
-  , drpWidthC
 
   -- more Region operators (beyond Language.PEAR.Region.API):
   , subRegion
@@ -103,25 +102,28 @@ mkPrimDRP :: Monad m => WC    -> (Contents -> Possibly (a,Width)) -> DRP m a
   --    some possibility for failure, so we'll be "lifting" at some point.
 
 mkPrimSRP w f =
-  (w, \r-> do
-           cs <- unsafeReadRegion r
-           except $ elaboratePossibly ["at region " ++ R.ppRegion r] $ f cs
-           -- note that w is checked during apply
-  )
+  SRP{ srpW= w
+     , srpP= \r->
+             do
+             cs <- unsafeReadRegion r
+             except $ elaboratePossibly ["at region " ++ R.ppRegion r] $ f cs
+             -- note that w is checked during apply
+     }
 
 mkPrimDRP wc f =
-  ( wc
-  , \r-> do
-         r' <- except $ subRegionMax r 0 wc
-           -- get region that satisfies the 'wc' constraint
-         cs <- readRegion r'
-         (a,w) <- except
-                $ elaboratePossibly ["at region " ++ R.ppRegion r']
-                $ f cs
-         --  assert (checkWC wc w) -- ??  FIXME!!
-         return (a, snd $ R.split1 r' w) -- ~obscure
-         -- FIXME: TODO: return good error msg
-  )
+  DRP{ drpWC = wc
+     , drpP  = \r->
+               do
+               r' <- except $ subRegionMax r 0 wc
+                 -- get region that satisfies the 'wc' constraint
+               cs <- readRegion r'
+               (a,w) <- except
+                      $ elaboratePossibly ["at region " ++ R.ppRegion r']
+                      $ f cs
+               --  assert (checkWC wc w) -- ??  FIXME!!
+               return (a, snd $ R.split1 r' w) -- ~obscure
+               -- FIXME: TODO: return good error msg
+     }
 
 
 ---- Applying Parsers to Regions -----------------------------------
@@ -142,7 +144,7 @@ p @!- r = fst <$> appSRP' p r -- ^ parse and drop remaining region
 p @@! r = appDRP  p r         -- ^ parse-dynamically, return remaining region
 
 appSRP :: Monad m => SRP m a -> Region -> PT m (VR a)
-appSRP (w,p) r =
+appSRP (SRP w p) r =
   if R.r_width r == w then
     (flip VR r) <$> p r
   else
@@ -163,7 +165,7 @@ appSRP' p r =
   return (a, r2)
 
 appDRP :: Monad m => DRP m a -> Region -> PT m (VR a,Region)
-appDRP (wc,p) r0 =
+appDRP (DRP wc p) r0 =
   do
   mCheckWC wc r0
   (a,r1) <- p r0
@@ -185,18 +187,19 @@ data VR a = VR {v :: a, r :: Region}
 
 pairSRPs :: Monad m => SRP m a -> SRP m b -> SRP m (a,b)
 pairSRPs pa pb =
-  ( wc
-  , \rc -> case R.split1P rc (srpWidth pa) of
-             Left ss       -> error (unlines ss)
-                              -- should never fail.
-             Right (ra,rb) ->
-                 do
-                 a <- (snd pa) ra
-                 b <- (snd pb) rb
-                 return (a,b)
-  )
+  SRP{ srpW= w'
+     , srpP= \rc ->
+             case R.split1P rc (srpWidth pa) of
+               Left ss       -> error (unlines ss)
+                                -- should never fail.
+               Right (ra,rb) ->
+                   do
+                   a <- (srpP pa) ra
+                   b <- (srpP pb) rb
+                   return (a,b)
+     }
   where
-  wc = srpWidth pa + srpWidth pb
+  w' = srpWidth pa + srpWidth pb
 
 sequenceSRPs :: [SRP m a] -> SRP m [a]
 sequenceSRPs = niy nilSRP
@@ -221,11 +224,11 @@ sequenceDRPs = niy
 pManySRPs :: Monad m => Int -> SRP m a -> SRP m [a]
 pManySRPs i p =
   assert (i >= 0) $
-  ( fromIntegral i * widthSingle
-  , \r-> do
-         let rs = R.splitWidths r (replicate i widthSingle)
-         mapM (fmap v . appSRP p) rs
-  )
+  SRP { srpW= fromIntegral i * widthSingle
+      , srpP= \r-> do
+              let rs = R.splitWidths r (replicate i widthSingle)
+              mapM (fmap v . appSRP p) rs
+      }
   where
   widthSingle = srpWidth p
 
@@ -297,22 +300,33 @@ mCheckWC wc r = if checkWC wc (r_width r) then
 
 ---- The LR implementation -----------------------------------------
 
--- NOTE: these can only be applied to 'matching' regions
--- TODO: turn the following into abstract datatypes:
---   - use short names and use OverloadedRecordDot
+-- NOTE: at application, we ensure these are only applied to
+-- 'conforming' regions
 
-type SRP m a = (Width, Region -> PT m a)           -- Static Region Parser
-type DRP m a = (WC   , Region -> PT m (a,Region))  -- Dynamic Region Parser
+-- FIXME: improve SRP/DRP
+--   - algebraic datatypes
+--   - use short names and use OverloadedRecordDot
+--   - functor/etc instances
+--   - hide 2nd argument in exports
+
+
+-- | SRP - Static Region Parser
+data SRP m a = SRP{ srpW :: Width
+                  , srpP :: Region -> PT m a
+                  }
+
+-- | DRP - Dynamic Region Parser
+data DRP m a = DRP{ drpWC :: WC
+                  , drpP  :: Region -> PT m (a,Region)
+                  }
 
 {-
 instance Functor (SRP m) where
   fmap f (w, rp) = (w, fmap f rp)
 -}
 
-srpWidth  :: SRP m a -> Width
-drpWidthC :: DRP m a -> WC
-srpWidth  = fst
-drpWidthC = fst
+srpWidth  = srpW
+drpWidthC = drpWC
 
 ---- utilities -----------------------------------------------------
 
