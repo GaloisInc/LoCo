@@ -14,6 +14,10 @@ module Language.LR.API
   , runPT
   , runPT'
 
+  -- some monad operators (exposing the exception monad)
+  , except
+  , throwE
+
   -- creating parsing primitives:
   , mkPrimSRP
   , mkPrimDRP
@@ -31,6 +35,7 @@ module Language.LR.API
   -- parsing combinators:
   , pairSRPs
   , sequenceSRPs
+  , pairDRPs
   , sequenceDRPs
   , pManySRPs
 
@@ -42,9 +47,6 @@ module Language.LR.API
   , subRegion
   , subRegionMax
 
-  -- exposing exception monad operators:
-  , except
-  , throwE
   )
 where
 
@@ -197,9 +199,22 @@ pairSRPs pa pb =
   wc = srpWidth pa + srpWidth pb
 
 sequenceSRPs :: [SRP m a] -> SRP m [a]
-sequenceSRPs = niy
+sequenceSRPs = niy nilSRP
+{-
+  foldr (\srpHd srpTl -> (\a as-> a:as) <$> pairSRPs srpHd srpTl
+        )
+        nilSRP
+  TODO: when SRP is functor/etc, becomes trivial.
+-}
+  where
+  nilSRP :: SRP m [a]
+  nilSRP = niy
 
-sequenceDRPs :: DRP m a -> DRP m b -> DRP m (a,b)
+pairDRPs :: DRP m a -> DRP m b -> DRP m (a,b)
+pairDRPs = niy
+  -- useful when intermediate regions unimportant.
+
+sequenceDRPs :: [DRP m a] ->DRP m [a]
 sequenceDRPs = niy
   -- useful when intermediate regions unimportant.
 
@@ -288,6 +303,11 @@ mCheckWC wc r = if checkWC wc (r_width r) then
 
 type SRP m a = (Width, Region -> PT m a)           -- Static Region Parser
 type DRP m a = (WC   , Region -> PT m (a,Region))  -- Dynamic Region Parser
+
+{-
+instance Functor (SRP m) where
+  fmap f (w, rp) = (w, fmap f rp)
+-}
 
 srpWidth  :: SRP m a -> Width
 drpWidthC :: DRP m a -> WC
