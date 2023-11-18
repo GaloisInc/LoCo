@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 
 module Language.LR.API
@@ -201,18 +202,14 @@ pairSRPs pa pb =
   where
   w' = srpWidth pa + srpWidth pb
 
-sequenceSRPs :: [SRP m a] -> SRP m [a]
-sequenceSRPs = niy nilSRP
-{-
-  FIXME: _
-  foldr (\srpHd srpTl -> (\a as-> a:as) <$> pairSRPs srpHd srpTl
-        )
-        nilSRP
-  TODO: when SRP is functor/etc, becomes trivial.
--}
-  where
-  nilSRP :: SRP m [a]
-  nilSRP = niy
+sequenceSRPs :: Monad m => [SRP m a] -> SRP m [a]
+sequenceSRPs =
+  foldr
+    (\srpHd srpTl -> (\(a,as)-> a:as) <$> pairSRPs srpHd srpTl)
+    nilSRP
+
+nilSRP :: Monad m => SRP m [a]
+nilSRP = SRP 0 (\_->return [])
 
 pairDRPs :: DRP m a -> DRP m b -> DRP m (a,b)
 pairDRPs = niy
@@ -316,20 +313,17 @@ mCheckWC wc r = if checkWC wc (r_width r) then
 data SRP m a = SRP{ srpW :: Width
                   , srpP :: Region -> PT m a
                   }
+     deriving(Functor)
 
 -- | DRP - Dynamic Region Parser
 data DRP m a = DRP{ drpC :: WC
                   , drpP :: Region -> PT m (a,Region)
                   }
-
-{-
-instance Functor (SRP m) where
-  fmap f (w, rp) = (w, fmap f rp)
--}
+     deriving(Functor)
 
 srpWidth  = srpW
 drpWidthC = drpC
 
 ---- utilities -----------------------------------------------------
 
-niy = error "niy"
+niy = error "not implemented yet"
