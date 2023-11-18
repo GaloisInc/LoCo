@@ -2,24 +2,18 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 -- {-# OPTIONS_GHC -ddump-splices #-}
 
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-  -- FIXME: remove the above!
 
 module Language.OptimalPEAR.Examples.ICC_Optimal where
 
 -- base pkgs:
 import           Control.Monad
-import           Data.IORef
 import           Data.Word
 import           Control.Monad.IO.Class
-import           System.IO.Unsafe (unsafePerformIO)
 
 -- package optimal:
 import           Language.Optimal.Quote (optimal)
 import           Thunk.RefVal (Thunked, delayAction, force)
-import           Thunk.Vector
 
 -- local PEAR modules:
 import           Language.PEAR.Primitives
@@ -51,11 +45,10 @@ type ICC = { cnt        : Word32
            , r3       : Region
            , teds_rs  : [Region]
            , canon_rs : CanonicalRegions
-           , r0       : Region
            }
 
-icc : ICC
-icc =
+icc : Region -> ICC
+icc r0 =
   { cnt        = <| pWord32 `app` cnt_r |>,
     tbl        = <| return (fst tblR3) |>,
     
@@ -72,12 +65,11 @@ icc =
     rs         = <| failP $ unPair <$> R.split1P r0 wWord32 |>,
     
     tblR3      = <| tblR3' rs cnt |>,
-    r3         = <| return (snd tblR3) |>,
-    r0         = <| liftIO $ getTopLevelRegion |>
+    r3         = <| return (snd tblR3) |>
   }
 |]
 
-icc :: MonadIO m => FailT m (ICC (FailT m))
+icc :: MonadIO m => Region -> FailT m (ICC (FailT m))
 
 cavityFree' canon_rs r0 =
   case cavities of
@@ -120,27 +112,3 @@ tblR3' [_,r2] cnt =
   tbl  <- lpTbl `app` r_tbl 
   return (tbl,r3)
     
-
----- Hack ----------------------------------------------------------
--- FIXME: this a hack until we have parameterized modules.
-
-regionGlobalVar :: IORef (Maybe Region)
-{-# NOINLINE regionGlobalVar #-}
-regionGlobalVar = unsafePerformIO (newIORef Nothing)
-
-setTopLevelRegion :: MonadIO m => Region -> m ()
-setTopLevelRegion r =
-  do
-  liftIO $ writeIORef regionGlobalVar (Just r)
-
-getTopLevelRegion :: MonadIO m => m Region
-getTopLevelRegion =
-  do
-  mr <- liftIO $ readIORef regionGlobalVar
-  case mr of
-    Just x -> return x
-    _      -> error "getTopLevelRegion"
-
-
-
-

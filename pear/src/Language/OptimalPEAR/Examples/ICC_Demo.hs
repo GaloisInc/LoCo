@@ -1,25 +1,15 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-  -- FIXME!
-
 module Language.OptimalPEAR.Examples.ICC_Demo where
 
 -- base pkgs:
-import           Control.Monad
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Identity
-import           Control.Monad.Trans.Except
-import           Data.Word (Word64, Word8)
 
 -- package locc (optimal):
-import           Language.Optimal.Quote (optimal)
-import           Thunk.RefVal (Thunked, delayAction, force)
+import           Thunk.RefVal (Thunked, force)
 
 -- local PEAR modules:
 import           Language.PEAR.Primitives
-import           Language.PEAR.ParserLibrary
-import           Language.PEAR.Region.API (Region,r_width)
+import           Language.PEAR.Region.API (Region)
 import qualified Language.PEAR.Region.API as R
-import           Language.PEAR.Types
 import           Language.PEAR.Util
 
 -- ICC:
@@ -45,17 +35,13 @@ iccPrims =
   , ("canon_rs"  , forceAndShow . canon_rs)
   ]
            
-run_ICC = run (\_-> icc)
+run_ICC = run icc
               iccPrims
               ["rs","cnt"]
              
-runI_ICC = runI (\_-> icc)
-                iccPrims
-
+runI_ICC = runI icc iccPrims
            
 run_ICC_d1 = run_ICC d1
-
-
 
 ---- utilities -----------------------------------------------------
 
@@ -79,7 +65,6 @@ run mkModule prims syms contents =
   pR <- flip runFailT_IO contents $
          do
          let globalRegion = R.R 0 (toLoc $ length contents)
-         liftIO $ setTopLevelRegion globalRegion  -- FIXME: Adhoc1
          mod' <- mkModule globalRegion  -- module, instantiated
          let doCmd sym =
                case lookup sym prims of
@@ -109,7 +94,6 @@ runI mkModule prims contents =
   _ <- flip runFailT_IO contents $
     do
     let globalRegion = R.R 0 (toLoc $ length contents)
-    liftIO $ setTopLevelRegion globalRegion  -- FIXME: Adhoc1
     mod' <- mkModule globalRegion  -- module, instantiated
     let go =
           do
