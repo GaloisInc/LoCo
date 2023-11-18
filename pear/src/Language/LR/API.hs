@@ -111,18 +111,18 @@ mkPrimSRP w f =
      }
 
 mkPrimDRP wc f =
-  DRP{ drpWC = wc
-     , drpP  = \r->
-               do
-               r' <- except $ subRegionMax r 0 wc
-                 -- get region that satisfies the 'wc' constraint
-               cs <- readRegion r'
-               (a,w) <- except
-                      $ elaboratePossibly ["at region " ++ R.ppRegion r']
-                      $ f cs
-               --  assert (checkWC wc w) -- ??  FIXME!!
-               return (a, snd $ R.split1 r' w) -- ~obscure
-               -- FIXME: TODO: return good error msg
+  DRP{ drpC = wc
+     , drpP = \r->
+              do
+              r' <- except $ subRegionMax r 0 wc
+                -- get region that satisfies the 'wc' constraint
+              cs <- readRegion r'
+              (a,w) <- except
+                     $ elaboratePossibly ["at region " ++ R.ppRegion r']
+                     $ f cs
+              --  assert (checkWC wc w) -- ??  FIXME!!
+              return (a, snd $ R.split1 r' w) -- ~obscure
+              -- FIXME: TODO: return good error msg
      }
 
 
@@ -131,8 +131,8 @@ mkPrimDRP wc f =
 -- Using appSRP' and appDRP can reduce many needs for explicit region
 -- splitting/etc.
 
--- naming conventions?
---  - @ for apply.
+-- naming conventions: [work on this!]
+--  - @ for SRP apply
 --  - @@ for DRP apply
 --  - maybe:
 --     _$ - throwing away region, more like $
@@ -142,6 +142,7 @@ p @$  r = appSRP  p r         -- ^ parse whole region, exactly
 p @!  r = appSRP' p r         -- ^ parse and return remaining region
 p @!- r = fst <$> appSRP' p r -- ^ parse and drop remaining region
 p @@! r = appDRP  p r         -- ^ parse-dynamically, return remaining region
+
 
 appSRP :: Monad m => SRP m a -> Region -> PT m (VR a)
 appSRP (SRP w p) r =
@@ -181,9 +182,8 @@ appDRP' p r =
 data VR a = VR {v :: a, r :: Region}
             deriving (Eq,Ord,Read,Show)
 
----- abstractions / using ------------------------------------------
 
--- these will correctly set appropriate widths/WCs:
+---- abstractions / using ------------------------------------------
 
 pairSRPs :: Monad m => SRP m a -> SRP m b -> SRP m (a,b)
 pairSRPs pa pb =
@@ -204,6 +204,7 @@ pairSRPs pa pb =
 sequenceSRPs :: [SRP m a] -> SRP m [a]
 sequenceSRPs = niy nilSRP
 {-
+  FIXME: _
   foldr (\srpHd srpTl -> (\a as-> a:as) <$> pairSRPs srpHd srpTl
         )
         nilSRP
@@ -231,6 +232,7 @@ pManySRPs i p =
       }
   where
   widthSingle = srpWidth p
+
 
 ---- internal monadic primitives, not exported -------------------------------
 
@@ -288,6 +290,7 @@ subRegionMax (R s w) l wc =
          MW mw    -> min mw (w-l)
          MW_NoMax -> w-l
 
+-- FIXME: better name?  r hasSpace w or ...
 mCheckWC :: Monad m => WC -> Region -> PT m ()
 mCheckWC wc r = if checkWC wc (r_width r) then
                   return ()
@@ -298,14 +301,13 @@ mCheckWC wc r = if checkWC wc (r_width r) then
                                   ]
                          ]
 
+
 ---- The LR implementation -----------------------------------------
 
 -- NOTE: at application, we ensure these are only applied to
 -- 'conforming' regions
 
 -- FIXME: improve SRP/DRP
---   - algebraic datatypes
---   - use short names and use OverloadedRecordDot
 --   - functor/etc instances
 --   - hide 2nd argument in exports
 
@@ -316,8 +318,8 @@ data SRP m a = SRP{ srpW :: Width
                   }
 
 -- | DRP - Dynamic Region Parser
-data DRP m a = DRP{ drpWC :: WC
-                  , drpP  :: Region -> PT m (a,Region)
+data DRP m a = DRP{ drpC :: WC
+                  , drpP :: Region -> PT m (a,Region)
                   }
 
 {-
@@ -326,7 +328,7 @@ instance Functor (SRP m) where
 -}
 
 srpWidth  = srpW
-drpWidthC = drpWC
+drpWidthC = drpC
 
 ---- utilities -----------------------------------------------------
 
