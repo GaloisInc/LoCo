@@ -1,9 +1,5 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE LiberalTypeSynonyms #-}
-
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Language.LR.Examples.ICC_Optimal where
 
@@ -16,12 +12,11 @@ import           Data.Word
 -- package optimal:
 import           Language.Optimal.Quote (optimal)
 import           Thunk.RefVal (Thunked, delayAction, delayTuple, force)
-import           Thunk.Vector
+-- import           Thunk.Vector -- [TODO]
 
 -- local PEAR modules:
 import           Language.LR.Examples.ICC_Spec
 import           Language.LR.API
-import           Language.PEAR.Util
 import qualified Language.PEAR.Region.API as R -- region
 import           Language.PEAR.Region.API(Region(..))
 
