@@ -21,6 +21,7 @@ module Language.LR.API
   -- applying primitives to regions:
   , (@$)
   , (@!)
+  , (@!-)
   , (@@!)
   , appSRP
   , appDRP
@@ -133,9 +134,10 @@ mkPrimDRP wc f =
 --     _$ - throwing away region, more like $
 --     _! - giving back region,
 
-p @$ x  = p `appSRP` x  -- name:
-p @!  x = p `appSRP'` x
-p @@! x = p `appDRP` x
+p @$  r = appSRP  p r         -- ^ parse whole region, exactly
+p @!  r = appSRP' p r         -- ^ parse and return remaining region
+p @!- r = fst <$> appSRP' p r -- ^ parse and drop remaining region
+p @@! r = appDRP  p r         -- ^ parse-dynamically, return remaining region
 
 appSRP :: Monad m => SRP m a -> Region -> PT m (VR a)
 appSRP (w,p) r =
@@ -143,7 +145,7 @@ appSRP (w,p) r =
     (flip VR r) <$> p r
   else
     throwE
-      [ unwords [ "appSRP'': width mismatch. expecting"
+      [ unwords [ "appSRP: width mismatch. expecting"
                 , show w
                 , "found"
                 , show r
