@@ -60,16 +60,11 @@ import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Except hiding (throwE,except)
 import qualified Control.Monad.Trans.Except as E
 
--- FIXME: improve these to better fit the use here
+-- FIXME[F3]: improve these to better fit how we use regions/etc.
 import           Language.PEAR.Types
 import           Language.PEAR.Util
 import qualified Language.PEAR.Region.API as R -- region
 import           Language.PEAR.Region.API(Region(..))
-
--- FIXME[R1]: Hide the abstraction!!
---   - make some types abstract
---   - let the "right functions" out, hide everything else
---   - but also export needed functions/types from Region/Etc
 
 ---- Types ---------------------------------------------------------
 
@@ -274,7 +269,7 @@ unsafeReadRegion r = PT $ do
 
 
 ---- Region operations (don't need 'PT m') -------------------------
--- FIXME: move to ...?
+-- FIXME[C3]: move to ...?
 
 extractRegion :: Region -> Contents -> Possibly Contents
 extractRegion (R st wd) c =
@@ -307,7 +302,7 @@ subRegionMax (R s w) l wc =
          MW mw    -> min mw (w-l)
          MW_NoMax -> w-l
 
--- FIXME: better name?  r hasSpace w or ...
+-- FIXME[C3]: better name?  r hasSpace w or ...
 mCheckWC :: Monad m => WC -> Region -> PT m ()
 mCheckWC wc r = if checkWC wc (r_width r) then
                   return ()
