@@ -1,10 +1,9 @@
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 
 module Language.LR.API
   (
   -- types:
-    PT      -- FIXME: make abstract!
+    PT
   , SRP
   , DRP
   , VR(..)
@@ -16,7 +15,7 @@ module Language.LR.API
 
   -- runnning the PT monad transformer:
   , runPT
-  , runPT'
+  , applyToContents
 
   -- some monad operators (exposing the exception monad)
   , except
@@ -55,9 +54,11 @@ import           Data.List
 import           Control.Exception (assert)
 
 -- transformer pkg:
+import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Reader
-import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Except hiding (throwE,except)
+import qualified Control.Monad.Trans.Except as E
 
 -- FIXME: improve these to better fit the use here
 import           Language.PEAR.Types
@@ -76,19 +77,38 @@ type Contents = String -- or ByteString
   -- FIXME[E2]: replace String, want constant time extraction!
 
 
----- The PT Monad Transformer --------------------------------------
+---- The PT Monad Transformer (agnostic to regions) ----------------
 
--- PT - Parser [Monad] Transformer
-type PT m a = ExceptT Errors (ReaderT Contents m) a
-  -- FIXME[R2]: make abstract.
+-- PT - Parser [Monad] Transformer, the abstract monad.
 
-runPT' :: PT m a -> Contents -> m (Possibly a)
+newtype PT m a = PT {_getPT :: PT' m a}
+  deriving (Applicative,Functor,Monad,MonadIO)
+
+type PT' m a = ExceptT Errors (ReaderT Contents m) a
+
+-- unneeded:
+-- instance MonadTrans PT where
+--  lift = PT . lift . lift
+
+runPT' :: PT' m a -> Contents -> m (Possibly a)
 runPT' m = runReaderT (runExceptT m)
 
-runPT :: Monad m => Contents -> (Region -> PT m a) -> m (Possibly a)
-runPT contents rp = runPT' (rp globalRegion) contents
-                    where
-                    globalRegion = R 0 (toLoc $ length contents)
+runPT :: PT m a -> Contents -> m (Possibly a)
+runPT (PT m) c = runPT' m c
+
+throwE :: Monad m => Errors -> PT m a
+throwE e = PT (E.throwE e)
+
+except :: Monad m => Either Errors a -> PT m a
+except x = PT (E.except x)
+
+---- run PT via regions! -------------------------------------------
+
+applyToContents :: Monad m => (Region -> PT m a) -> Contents -> m (Possibly a)
+applyToContents rp contents =
+  runPT (rp globalRegion) contents
+  where
+  globalRegion = R 0 (toLoc $ length contents)
 
 
 ---- primitives ----------------------------------------------------
@@ -96,7 +116,7 @@ runPT contents rp = runPT' (rp globalRegion) contents
 mkPrimSRP :: Monad m => Width -> (Contents -> Possibly a        ) -> SRP m a
 mkPrimDRP :: Monad m => WC    -> (Contents -> Possibly (a,Width)) -> DRP m a
 
-  -- and for now, we're ignoring non-failing parsers!  Because?
+  -- For now, we're not distinguishing non-failing parsers!  Because,
   --  - Optimal doesn't currently/easily support.
   --  - Adds confusion to the syntax.
   --  - How much have we lost?  In most any parser there will be at least
@@ -237,20 +257,20 @@ pManySRPs i p =
 --
 -- This may fail (in the monad), because the region may be out of range.
 readRegion :: Monad m => Region -> PT m Contents
-readRegion r = do
-               s <- lift ask
-               except $ extractRegion r s
+readRegion r = PT $ do
+                    s <- lift ask
+                    E.except $ extractRegion r s
 
 -- | monadic primitive to extract a region of the file Contents
 --
 -- can use this if you know the region is good.
 --   FIXME: this really used (now that Fail/NoFail merged, no use for).
 unsafeReadRegion :: Monad m => Region -> PT m Contents
-unsafeReadRegion r = do
-                     s <- lift ask
-                     case extractRegion r s of
-                       Left e   -> error (concat e)
-                       Right cs -> return cs
+unsafeReadRegion r = PT $ do
+                          s <- lift ask
+                          case extractRegion r s of
+                            Left e   -> error (concat e)
+                            Right cs -> return cs
 
 
 ---- Region operations (don't need 'PT m') -------------------------

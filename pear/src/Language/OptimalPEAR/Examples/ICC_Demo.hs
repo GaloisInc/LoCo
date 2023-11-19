@@ -47,7 +47,7 @@ run :: (Region -> FailT IO (env (FailT IO)))         -- mkModule
     -> [String]                                      -- sequence of prims
     -> Contents
     -> IO ()
-run = run' runFailT_IO 
+run = run' (flip runFailT_IO)
 
 ---- run Optimal module interactively ------------------------------
                   
@@ -56,5 +56,6 @@ runI :: (Region -> FailT IO (env (FailT IO)))         -- mkModule
     -> [(String, env (FailT IO) -> FailT IO String)] -- force & show
     -> Contents
     -> IO ()    
-runI = runI' runFailT_IO
+runI = runI' (flip runFailT_IO)
+
 

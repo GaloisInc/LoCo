@@ -27,15 +27,15 @@ forceAndShow tx =
 -- 
 --   pmod is a parameterized module, takes a region
 run' :: (MonadIO m, Eq s, Show s)
-     => (m () -> [a] -> IO (Possibly ()))  -- run 'm' on contents.
+     => ([a] -> m () -> IO (Possibly ()))  -- run 'm' on contents.
      -> (Region -> m b)                    -- Region parameterized 'module'
      -> [(s, b -> m String)]               -- your force&show environment
      -> [s]                                -- list of syms to demand, the prog
      -> [a]                                -- contents to 'read'
      -> IO ()
-run' runM mkModule prims syms contents =
+run' runOn mkModule prims syms contents =
   do
-  pR <- flip runM contents $
+  pR <- runOn contents $
          do
          let globalRegion = R.R 0 (toLoc $ length contents)
          mod' <- mkModule globalRegion  -- module, instantiated
@@ -58,14 +58,14 @@ run' runM mkModule prims syms contents =
                   
 -- (this more polymorphic than written; useful?)
 runI' :: (MonadIO m)
-      => (m () -> [a] -> IO a2)     -- run 'm' on contents
+      => ([a] -> m () -> IO a2)     -- run 'm' on contents
       -> (Region -> m b)            -- the Region parameterized 'module'
       -> [(String, b -> m String)]  -- force & show environment
       -> [a]                        -- contents to read
       -> IO ()
-runI' runM mkModule prims contents =
+runI' runOn mkModule prims contents =
   do
-  _ <- flip runM contents $
+  _ <- runOn contents $
     do
     let globalRegion = R.R 0 (toLoc $ length contents)
     mod' <- mkModule globalRegion  -- module, instantiated

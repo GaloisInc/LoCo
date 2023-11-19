@@ -64,7 +64,7 @@ icc rFile =
 
 run_ICC_d1 = run_ICC d1
 
-run_ICC = run' runPT' icc iccPrims ["cnt","rRest","tbl","teds","teds_safe"]
+run_ICC = run' (flip runPT) icc iccPrims ["cnt","rRest","tbl","teds","teds_safe"]
 
 iccPrims :: MonadIO m => [(String, ICC m -> m String)]
 iccPrims =
