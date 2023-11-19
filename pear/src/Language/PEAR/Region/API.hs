@@ -14,8 +14,11 @@ module Language.PEAR.Region.API
   , split1F
   , split1_Possibly
   , splitWidths
-  , splitWidthsP  -- FIXME: make naming consistent
+  , splitWidthsP  -- FIXME[C1]: make naming consistent
   , splitWidths'
+  , splitNWidthP
+  , splitNWidthExact
+
   , subRegion_Possibly
   , subRegionP
   , regionMinusSuffix

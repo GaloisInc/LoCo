@@ -21,7 +21,9 @@ stub = error "stub"
 
 type Loc = Word64  -- generally absolute file offset/location
 type Offset = Loc  -- generally relative byte offset in file/region
-type Width  = Loc  -- generally width of a field/region/etc.
+type Width  = Word64  -- generally width of a field/region/etc.
+type Count  = Word64  -- counts
+
 
 toLoc :: Integral a => a -> Loc
 toLoc = fromIntegral

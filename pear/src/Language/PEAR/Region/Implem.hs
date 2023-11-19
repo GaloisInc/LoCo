@@ -106,7 +106,6 @@ getContext r1@(R s1 _w1) r2@(R s2 w2) =
     )
   else
     error $ unwords ["getContext: not regionContains",show r1,show r2]
-  
 
 ---- Region primitives -------------------------------------------------------
 
@@ -156,6 +155,23 @@ split1_Possibly (R s w) w' =
                     , show w'
                     ]]
 
+-- | splitNWidthP n w r - create n regions of width n from prefix of r
+splitNWidthP :: Integral n
+             => n -> Width -> Region -> Possibly ([Region],Region)
+splitNWidthP n' w r0 =
+  do
+  let wNeeded = n*w
+      n = fromIntegral n'
+  (r1,r2) <- split1_Possibly r0 wNeeded  -- FIXME: tweak error msg
+  return ([R (r_start r1 + i*w) w | i<-[0..n-1]], r2)
+  
+splitNWidthExact :: Integral n
+                 => n -> Width -> Region -> [Region]
+splitNWidthExact n w r0 =
+  case splitNWidthP n w r0 of
+    Left m       -> error (concat m)
+    Right (rs,_) -> rs
+  
 -- | n widths gives n regions
 splitWidthsP :: Region -> [Width] -> Possibly [Region]
 splitWidthsP r' ws' = splitWidthsP' r' ws'
