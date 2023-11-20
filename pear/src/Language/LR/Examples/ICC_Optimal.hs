@@ -17,12 +17,12 @@ import           Thunk.Vector
 -- local PEAR modules:
 import           Language.LR.Examples.ICC_Spec
 import           Language.LR.API
-import qualified Language.PEAR.Region.API as R -- region
+import qualified Language.PEAR.Region.API as R
 import           Language.PEAR.Region.API(Region(..))
 
 import           Language.OptimalPEAR.RunOptimal
 
--- bring into scope for demo:
+-- merely bringing into scope for demo:
 import           Language.OptimalPEAR.Examples.ICC_Inputs
 
 ---- ICC : Optim(l-PEAR), not using vectors ------------------------
@@ -60,11 +60,13 @@ icc rFile =
 
 icc :: MonadIO m => Region -> PT m (ICC (PT m))
 
+
 ---- Demo ----------------------------------------------------------
 
 run_ICC_d1 = run_ICC d1
 
-run_ICC = run' (flip runPT) icc iccPrims ["cnt","rRest","tbl","teds","teds_safe"]
+run_ICC = run' (flip runPT) icc iccPrims
+               ["cnt","rRest","tbl","teds","teds_safe"]
 
 iccPrims :: MonadIO m => [(String, ICC m -> m String)]
 iccPrims =
@@ -103,6 +105,7 @@ icc_v rFile =
 
 icc_v :: MonadIO m => Region -> PT m (ICC_V (PT m))
 
+getTblRegion :: (Monad m, Integral n) => n -> Region -> Int -> PT m Region
 getTblRegion cnt r i = do
                        (vs,_) <- except $ R.splitNWidthP cnt 2 r
                        return (vs !! i )
