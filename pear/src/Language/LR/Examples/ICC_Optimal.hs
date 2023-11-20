@@ -116,14 +116,19 @@ getTblRegion cnt r w i = do
 
 ---- ICC_V Demo ----------------------------------------------------
 
-run_ICC_V = run' (flip runPT) icc_v iccPrims_v
-                 ["cnt'","tbl'","tbl'Elems"]
-                 -- ["cnt'","tbl'","teds'","teds'_0"]
+run_ICC_V_primList = run' (flip runPT) icc_v iccPrims_v
+run_ICC_V_clienta = run_ICC_V_primList ["cnt'","tbl'","tbl'Elems"]
+run_ICC_V_clientb = run_ICC_V_primList ["cnt'","rRest'","rsTbl","rsTblElems"]
+run_ICC_V_clientc = run_ICC_V_primList ["cnt'","rRest'","rsTbl","tbl'Elems"]
+run_ICC_V_clientd = run_ICC_V_primList ["cnt'","tbl'","teds'","teds'_0"]
 
 iccPrims_v :: MonadIO m => [(String, ICC_V m -> m String)]
 iccPrims_v =
-  [ ("cnt'"      , forceAndShow . cnt')
-  , ("tbl'"      , forceAndShow . tbl')
+  [ ("cnt'"      , forceAndShow    . cnt')
+  , ("rRest'"    , forceAndShow    . rRest')
+  , ("rsTbl"     , forceAndShow    . rsTbl)
+  , ("rsTblElems", forceAndShowVec . rsTbl)
+  , ("tbl'"      , forceAndShow    . tbl')
   , ("tbl'Elems" , forceAndShowVec . tbl')
   , ("teds'"     , forceAndShow . teds') -- ??
   , ("teds'_0"   , flip indexAndShow 0 . teds')
