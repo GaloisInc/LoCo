@@ -87,21 +87,23 @@ type TBLEntry = (Word32,Word32)
 
 [optimal|
 type ICC_V = { cnt'       : VR Int
-             , tblvec     : Vec<Region>
-             -- , tbl'       : VR TBL
-             , teds'      : [TED]
+             , rsTbl      : Vec<Region>
+             , tbl'       : Vec<TBLEntry>
+             , teds'      : Vec<TED>
              }
 
 icc_v : Region -> ICC_V
 icc_v rFile =
-  { (cnt',rRest) = <| pInt4Bytes                      @!  rFile      |>
-  , cntv         = <| pure (v cnt') |>
-  , tblvec       = generate cntv <| \i-> getTblRegion cntv rRest i   |>
-  , tbl'         = <| pManySRPs (v cnt') pTblEntry    @!- rRest      |>
-  , rsTeds       = <| except $ mapM (getSubRegion rFile) (v tbl')    |>
-  , teds'        = <| mapM applyPTED rsTeds                          |>
+  { (cnt',rRest) = <| pInt4Bytes                      @!  rFile       |>
+  , cntv         = <| pure (v cnt')                                   |>
+  , rsTbl        = generate cntv <| \i-> getTblRegion cntv rRest i    |>
+  , tbl'         = map rsTbl  <| \r-> pTblEntry @$$ r                 |>
+  , rsTeds       = map tbl'   <| \r-> except $ getSubRegion rFile r   |>
+  , teds'        = map rsTeds <| applyPTED                            |>
   }
 |]
+
+p @$$ r = v <$> appSRP p r     -- ^ parse whole region, exactly, toss region
 
 icc_v :: MonadIO m => Region -> PT m (ICC_V (PT m))
 
