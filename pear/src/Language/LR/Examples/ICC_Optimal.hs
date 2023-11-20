@@ -61,7 +61,7 @@ icc rFile =
 icc :: MonadIO m => Region -> PT m (ICC (PT m))
 
 
----- Demo ----------------------------------------------------------
+---- ICC Demo ------------------------------------------------------
 
 run_ICC_d1 = run_ICC d1
 
@@ -103,9 +103,9 @@ icc_v rFile =
   }
 |]
 
-p @$$ r = v <$> appSRP p r     -- ^ parse whole region, exactly, toss region
-
 icc_v :: MonadIO m => Region -> PT m (ICC_V (PT m))
+
+p @$$ r = v <$> appSRP p r  -- ^ parse whole region, exactly, toss region
 
 getTblRegion :: (Monad m, Integral n) => n -> Region -> Int -> PT m Region
 getTblRegion cnt r i = do
