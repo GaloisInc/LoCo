@@ -48,6 +48,7 @@ varNameTests =
       testSuccess "variable with internal uppercase" "hEllo" "hEllo",
       testSuccess "variable with numerals" "hell0" "hell0",
       testSuccess "variable with underscores" "he_llo" "he_llo",
+      testSuccess "variable starting with underscore" "_hello" "_hello",
       testFailure "variable with initial uppercase" "Hello"
     ]
   where
