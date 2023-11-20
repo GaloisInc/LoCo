@@ -87,6 +87,7 @@ type TBLEntry = (Word32,Word32)
 
 [optimal|
 type ICC_V = { cnt'       : VR Int
+             , rRest'     : Region
              , rsTbl      : Vec<Region>
              , tbl'       : Vec<TBLEntry>
              , teds'      : Vec<TED>
@@ -94,12 +95,13 @@ type ICC_V = { cnt'       : VR Int
 
 icc_v : Region -> ICC_V
 icc_v rFile =
-  { (cnt',rRest) = <| pInt4Bytes                      @!  rFile       |>
-  , cntv         = <| pure (v cnt')                                   |>
-  , rsTbl        = generate cntv <| \i-> getTblRegion cntv rRest i    |>
-  , tbl'         = map rsTbl  <| \r-> pTblEntry @$$ r                 |>
-  , rsTeds       = map tbl'   <| \r-> except $ getSubRegion rFile r   |>
-  , teds'        = map rsTeds <| applyPTED                            |>
+  { (cnt',rRest') = <| pInt4Bytes                      @!  rFile       |>
+  , cntv          = <| pure (v cnt')                                   |>
+  , rsTbl         = generate cntv <| \i-> getTblRegion cntv rRest'
+                                          (srpW' pTblEntry) i           |>
+  , tbl'          = map rsTbl  <| \r-> pTblEntry @$$ r                 |>
+  , rsTeds        = map tbl'   <| \r-> except $ getSubRegion rFile r   |>
+  , teds'         = map rsTeds <| applyPTED                            |>
   }
 |]
 
@@ -107,10 +109,10 @@ icc_v :: MonadIO m => Region -> PT m (ICC_V (PT m))
 
 p @$$ r = v <$> appSRP p r  -- ^ parse whole region, exactly, toss region
 
-getTblRegion :: (Monad m, Integral n) => n -> Region -> Int -> PT m Region
-getTblRegion cnt r i = do
-                       (vs,_) <- except $ R.splitNWidthP cnt 2 r
-                       return (vs !! i )
+-- FIXME: turn into a more generic slice & dice combinator (change nm at least)
+getTblRegion cnt r w i = do
+                         (vs,_) <- except $ R.splitNWidthP cnt w r
+                         return (vs !! i )
 
 ---- ICC_V Demo ----------------------------------------------------
 
