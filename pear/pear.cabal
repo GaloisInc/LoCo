@@ -71,7 +71,8 @@ library
         optimal,
         QuickCheck,
         generic-arbitrary,
-        transformers
+        transformers,
+        vector
 
 test-suite pear-test
     import: common

@@ -111,3 +111,18 @@ getTblRegion :: (Monad m, Integral n) => n -> Region -> Int -> PT m Region
 getTblRegion cnt r i = do
                        (vs,_) <- except $ R.splitNWidthP cnt 2 r
                        return (vs !! i )
+
+---- ICC_V Demo ----------------------------------------------------
+
+run_ICC_V = run' (flip runPT) icc_v iccPrims_v
+                 ["cnt'","tbl'","tbl'Elems"]
+                 -- ["cnt'","tbl'","teds'","teds'_0"]
+
+iccPrims_v :: MonadIO m => [(String, ICC_V m -> m String)]
+iccPrims_v =
+  [ ("cnt'"      , forceAndShow . cnt')
+  , ("tbl'"      , forceAndShow . tbl')
+  , ("tbl'Elems" , forceAndShowVec . tbl')
+  , ("teds'"     , forceAndShow . teds') -- ??
+  , ("teds'_0"   , flip indexAndShow 0 . teds')
+  ]

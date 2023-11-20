@@ -2,9 +2,11 @@ module Language.OptimalPEAR.RunOptimal where
 
 -- base pkgs:
 import           Control.Monad.IO.Class
+import           Data.Vector qualified as V
 
--- package locc (optimal):
+-- package optimal:
 import           Thunk.RefVal (Thunked, force)
+import           Thunk.Vector
 
 -- local PEAR modules:
 import           Language.PEAR.Region.API (Region)
@@ -18,6 +20,21 @@ forceAndShow tx =
   do
   x <- force tx
   return (show x)
+              
+forceAndShowVec :: (MonadIO m, Show a) => Thunked m (Vector m a) -> m String
+forceAndShowVec tvec =
+  do
+  tvec' <- force tvec
+  xs <- V.mapM_ force (vecContent tvec')
+  return (show xs)
+              
+indexAndShow :: (MonadIO m, Show a)
+             => Thunked m (Vector m a) -> Int -> m String
+indexAndShow tvec i =
+  do
+  tvec' <- force tvec
+  a <- vIndex tvec' i
+  return (show a)
               
 
 ---- run Optimal module with list of commands ----------------------
