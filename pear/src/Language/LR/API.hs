@@ -41,6 +41,7 @@ module Language.LR.API
   , pairDRPs
   , sequenceDRPs
   , pManySRPs
+  , returnSRP
 
   -- more Region operators (beyond Language.PEAR.Region.API):
   , subRegion
@@ -221,10 +222,10 @@ sequenceSRPs :: Monad m => [SRP m a] -> SRP m [a]
 sequenceSRPs =
   foldr
     (\srpHd srpTl -> (\(a,as)-> a:as) <$> pairSRPs srpHd srpTl)
-    nilSRP
+    (returnSRP [])
 
-nilSRP :: Monad m => SRP m [a]
-nilSRP = SRP 0 (\_->return [])
+returnSRP :: Monad m => a -> SRP m a
+returnSRP a = SRP 0 (\_->return a)
 
 pairDRPs :: DRP m a -> DRP m b -> DRP m (a,b)
 pairDRPs = niy
