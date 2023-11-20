@@ -25,7 +25,7 @@ forceAndShowVec :: (MonadIO m, Show a) => Thunked m (Vector m a) -> m String
 forceAndShowVec tvec =
   do
   tvec' <- force tvec
-  xs <- V.mapM_ force (vecContent tvec')
+  xs <- V.mapM force (vecContent tvec')
   return (show xs)
               
 indexAndShow :: (MonadIO m, Show a)

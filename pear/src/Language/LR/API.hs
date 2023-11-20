@@ -12,6 +12,8 @@ module Language.LR.API
   -- what *is* exposed from SRP/DRP parsers:
   , srpWidth
   , drpWidthC
+  , srpW, srpW'
+  , drpC, drpC'
 
   -- runnning the PT monad transformer:
   , runPT
@@ -339,6 +341,10 @@ data DRP m a = DRP{ drpC :: WC
 
 srpWidth  = srpW
 drpWidthC = drpC
+
+-- for contexts when the monad is "unconstrained", use these:
+srpW' = srpW :: SRP IO a -> Width
+drpC' = drpC :: DRP IO a -> WC
 
 ---- utilities -----------------------------------------------------
 
