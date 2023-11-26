@@ -7,10 +7,8 @@ module Language.LR.Examples.ICC_Optimal where
 import           Control.Monad.IO.Class
 import           Data.Word
 
--- transformer pkg:
-
 -- package optimal:
-import           Language.Optimal.Quote (optimal)
+import           Language.Optimal.Quote (optimal,optimalVerbose)
 import           Thunk.RefVal (Thunked, delayAction, delayTuple, force)
 import           Thunk.Vector
 
@@ -82,15 +80,15 @@ iccPrims =
 
 type TBLEntry = (Word32,Word32)
 -- FIXME: TODO
---   - finish translating to vectors
 --   - get rid of VR
 
-[optimal|
+[optimalVerbose|
 type ICC_V = { cnt'       : VR Int
              , rRest'     : Region
              , rsTbl      : Vec<Region>
              , tbl'       : Vec<TBLEntry>
              , teds'      : Vec<TED>
+             , teds'_0    : TED
              }
 
 icc_v : Region -> ICC_V
@@ -102,8 +100,11 @@ icc_v rFile =
   , tbl'          = map rsTbl  <| \r-> pTblEntry @$$ r                 |>
   , rsTeds        = map tbl'   <| \r-> except $ getSubRegion rFile r   |>
   , teds'         = map rsTeds <| applyPTED                            |>
+  , teds'_0       = index teds' zero
   }
 |]
+
+zero = 0 :: Int  -- FIXME: nice to have ints in Optimal
 
 icc_v :: MonadIO m => Region -> PT m (ICC_V (PT m))
 
@@ -117,11 +118,15 @@ getTblRegion cnt r w i = do
 ---- ICC_V Demo ----------------------------------------------------
 
 run_ICC_V_primList = run' (flip runPT) icc_v iccPrims_v
-run_ICC_V_clienta = run_ICC_V_primList ["cnt'","tbl'","tbl'Elems"]
-run_ICC_V_clientb = run_ICC_V_primList ["cnt'","rRest'","rsTbl","rsTblElems"]
-run_ICC_V_clientc = run_ICC_V_primList ["cnt'","rRest'","rsTbl","tbl'Elems"]
-run_ICC_V_clientd = run_ICC_V_primList ["cnt'","tbl'","teds'","teds'_0"]
-run_ICC_V_cliente = run_ICC_V_primList ["cnt'","teds'_0"]
+
+runp clientProg = run_ICC_V_primList clientProg
+
+clientProgA = ["cnt'","tbl'","tbl'Elems"]
+clientProgB = ["cnt'","rRest'","rsTbl","rsTblElems"]
+clientProgC = ["cnt'","rRest'","rsTbl","tbl'Elems"]
+clientProgD = ["cnt'","tbl'","teds'","teds'_0"]
+clientProgE = ["cnt'","teds''_0","teds''_0"]
+clientProgE' = clientProgE ++ ["teds''_1","teds''_1"]
 
 iccPrims_v :: MonadIO m => [(String, ICC_V m -> m String)]
 iccPrims_v =
@@ -131,6 +136,8 @@ iccPrims_v =
   , ("rsTblElems", forceAndShowVec . rsTbl)
   , ("tbl'"      , forceAndShow    . tbl')
   , ("tbl'Elems" , forceAndShowVec . tbl')
-  , ("teds'"     , forceAndShow . teds') -- ??
-  , ("teds'_0"   , flip indexAndShow 0 . teds')
+  , ("teds'"     , forceAndShow . teds')    -- doesn't show much, it's a Vec
+  , ("teds'_0"   , forceAndShow . teds'_0)
+  , ("teds''_0"  , flip indexAndShow 0 . teds')
+  , ("teds''_1"  , flip indexAndShow 1 . teds')
   ]

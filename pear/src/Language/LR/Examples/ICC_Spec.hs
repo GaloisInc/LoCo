@@ -69,13 +69,14 @@ applyPTED r = v <$> pTED (r_width r) `appSRP` r
   pTED :: Monad m => Width -> SRP m TED
   pTED w = mkPrimSRP w (Right . TED)
 
+getSubRegion :: Integral a => Region -> (a,a) -> Possibly Region
 getSubRegion r (loc,sz) = R.subRegionP r (toLoc loc) (toLoc sz)
   -- NOTE:
   --  - different calls could overlap.
   --  - we might check *here* that all fall into right section
-  --  - need 'toLoc' to convert from Word32 to Word64
-
-
+  -- Hmmm:
+  --  - more overloading?? have another Integral type?
+  --  - no overloading & need 'toLoc' to convert from Word32 to Word64
 
 
 ---- demo friendly parsing library ---------------------------------
