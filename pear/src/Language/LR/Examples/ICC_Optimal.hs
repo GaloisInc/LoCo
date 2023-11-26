@@ -109,7 +109,7 @@ icc_v :: MonadIO m => Region -> PT m (ICC_V (PT m))
 
 p @$$ r = v <$> appSRP p r  -- ^ parse whole region, exactly, toss region
 
--- FIXME: turn into a more generic slice & dice combinator (change nm at least)
+-- FIXME[C1]: turn into a more generic slice & dice combinator (change nm at least)
 getTblRegion cnt r w i = do
                          (vs,_) <- except $ R.splitNWidthP cnt w r
                          return (vs !! i )
@@ -121,6 +121,7 @@ run_ICC_V_clienta = run_ICC_V_primList ["cnt'","tbl'","tbl'Elems"]
 run_ICC_V_clientb = run_ICC_V_primList ["cnt'","rRest'","rsTbl","rsTblElems"]
 run_ICC_V_clientc = run_ICC_V_primList ["cnt'","rRest'","rsTbl","tbl'Elems"]
 run_ICC_V_clientd = run_ICC_V_primList ["cnt'","tbl'","teds'","teds'_0"]
+run_ICC_V_cliente = run_ICC_V_primList ["cnt'","teds'_0"]
 
 iccPrims_v :: MonadIO m => [(String, ICC_V m -> m String)]
 iccPrims_v =
