@@ -20,8 +20,8 @@ import           Language.PEAR.Region.API(Region(..))
 
 import           Language.OptimalPEAR.RunOptimal
 
--- merely bringing into scope for demo:
-import           Language.OptimalPEAR.Examples.ICC_Inputs
+-- to get input for runing the demos, bring this into scope:
+-- import           Language.OptimalPEAR.Examples.ICC_Inputs
 
 ---- ICC : Optim(l-PEAR), not using vectors ------------------------
 
@@ -61,10 +61,10 @@ icc :: MonadIO m => Region -> PT m (ICC (PT m))
 
 ---- ICC Demo ------------------------------------------------------
 
-run_ICC_d1 = run_ICC d1
+run_ICC_primList = run' (flip runPT) icc iccPrims
+runp prog = run_ICC_primList prog
 
-run_ICC = run' (flip runPT) icc iccPrims
-               ["cnt","rRest","tbl","teds","teds_safe"]
+clientProgNoVa = ["cnt","rRest","tbl","teds","teds_safe"]
 
 iccPrims :: MonadIO m => [(String, ICC m -> m String)]
 iccPrims =
@@ -79,7 +79,7 @@ iccPrims =
 ---- ICC_V : Optim(l-PEAR), Using vectors ------------------------
 
 type TBLEntry = (Word32,Word32)
--- FIXME: TODO
+-- FIXME: TODO[C3]
 --   - get rid of VR
 
 [optimalVerbose|
@@ -89,6 +89,7 @@ type ICC_V = { cnt'       : VR Int
              , tbl'       : Vec<TBLEntry>
              , teds'      : Vec<TED>
              , teds'_0    : TED
+             , teds'_1    : TED
              }
 
 icc_v : Region -> ICC_V
@@ -100,11 +101,21 @@ icc_v rFile =
   , tbl'          = map rsTbl  <| \r-> pTblEntry @$$ r                 |>
   , rsTeds        = map tbl'   <| \r-> except $ getSubRegion rFile r   |>
   , teds'         = map rsTeds <| applyPTED                            |>
-  , teds'_0       = index teds' zero
+  , teds'_0       = index teds' i_0
+  , teds'_1       = index teds' i_1
   }
 |]
 
-zero = 0 :: Int  -- FIXME: nice to have ints in Optimal
+-- Optimal: Wants/Issues
+--  - nice to have ints, to apply to index
+--  - allows duplicate names in both the module and in the type!
+--  - handle index errors "ourselves", rather not this:
+--     runp_v ["teds''_0"] d1
+--     ...
+--     *** Exception: index out of bounds (0,0)
+
+i_0 = 0 :: Int
+i_1 = 1 :: Int
 
 icc_v :: MonadIO m => Region -> PT m (ICC_V (PT m))
 
@@ -119,7 +130,7 @@ getTblRegion cnt r w i = do
 
 run_ICC_V_primList = run' (flip runPT) icc_v iccPrims_v
 
-runp clientProg = run_ICC_V_primList clientProg
+runp_v clientProg = run_ICC_V_primList clientProg
 
 clientProgA = ["cnt'","tbl'","tbl'Elems"]
 clientProgB = ["cnt'","rRest'","rsTbl","rsTblElems"]
@@ -138,6 +149,20 @@ iccPrims_v =
   , ("tbl'Elems" , forceAndShowVec . tbl')
   , ("teds'"     , forceAndShow . teds')    -- doesn't show much, it's a Vec
   , ("teds'_0"   , forceAndShow . teds'_0)
+  , ("teds'_1"   , forceAndShow . teds'_1)
   , ("teds''_0"  , flip indexAndShow 0 . teds')
   , ("teds''_1"  , flip indexAndShow 1 . teds')
   ]
+
+
+-- NOTE that lazy vectors are working:
+--   take 25 d3 -- remove the teds[1] from the file.
+--
+--   ghci> runp_v ["teds'_0"] (take 25 d3)
+--   ...
+--   "teds'_0" evaluated to TED "abcde"
+--   program exited cleanly
+--   ghci> runp_v ["teds'_1"] (take 25 d3)
+--   ...
+--   program exited with:
+--   no subregion (25,3) of region R 0 25
