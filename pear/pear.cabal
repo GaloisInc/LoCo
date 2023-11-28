@@ -73,4 +73,6 @@ test-suite pear-test
     main-is: Main.hs
 
     build-depends:
-        base ^>=4.16.4.0
+        base ^>=4.16.4.0,
+        pear
+        
