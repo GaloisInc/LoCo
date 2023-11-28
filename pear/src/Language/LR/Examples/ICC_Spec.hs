@@ -7,7 +7,7 @@ import           Data.Word
 import           Text.Read
 
 -- local modules:
-import           Language.LR.API
+import           Language.PEAR.API
 import           Language.PEAR.Util
 import qualified Language.PEAR.Region.API as R -- region
 import           Language.PEAR.Region.API(Region(..))

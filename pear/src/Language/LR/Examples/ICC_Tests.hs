@@ -6,7 +6,7 @@ module Language.LR.Examples.ICC_Tests where
 import           Language.LR.Examples.ICC_Spec
 import           Language.OptimalPEAR.Examples.ICC_Inputs
 
-import           Language.LR.API
+import           Language.PEAR.API
 
 runTest = applyToContents icc_pear
 

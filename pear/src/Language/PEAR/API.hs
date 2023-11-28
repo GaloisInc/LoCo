@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 
-module Language.LR.API
+module Language.PEAR.API
   (
   -- types:
     PT

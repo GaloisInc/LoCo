@@ -14,7 +14,7 @@ import           Thunk.Vector
 
 -- local PEAR modules:
 import           Language.LR.Examples.ICC_Spec
-import           Language.LR.API
+import           Language.PEAR.API
 import qualified Language.PEAR.Region.API as R
 import           Language.PEAR.Region.API(Region(..))
 

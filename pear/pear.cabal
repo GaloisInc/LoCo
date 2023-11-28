@@ -44,6 +44,7 @@ library
     hs-source-dirs: src
 
     exposed-modules:
+        Language.PEAR.API
         Language.PEAR.Region.API
         Language.PEAR.Region.Implem
         Language.PEAR.Region.Test
@@ -53,7 +54,6 @@ library
         Language.OptimalPEAR.Examples.ICC_Inputs
         Language.OptimalPEAR.RunOptimal
         
-        Language.LR.API
         -- Language.LR.Implem
         Language.LR.Examples.ICC_Spec
         Language.LR.Examples.ICC_Tests
