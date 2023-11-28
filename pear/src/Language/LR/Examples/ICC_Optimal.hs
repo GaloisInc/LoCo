@@ -141,15 +141,15 @@ clientProgE' = clientProgE ++ ["teds''_1","teds''_1"]
 
 iccPrims_v :: MonadIO m => [(String, ICC_V m -> m String)]
 iccPrims_v =
-  [ ("cnt'"      , forceAndShow    . cnt')
-  , ("rRest'"    , forceAndShow    . rRest')
-  , ("rsTbl"     , forceAndShow    . rsTbl)
-  , ("rsTblElems", forceAndShowVec . rsTbl)
-  , ("tbl'"      , forceAndShow    . tbl')
-  , ("tbl'Elems" , forceAndShowVec . tbl')
-  , ("teds'"     , forceAndShow . teds')    -- doesn't show much, it's a Vec
-  , ("teds'_0"   , forceAndShow . teds'_0)
-  , ("teds'_1"   , forceAndShow . teds'_1)
+  [ ("cnt'"      , forceAndShow        . cnt')
+  , ("rRest'"    , forceAndShow        . rRest')
+  , ("rsTbl"     , forceAndShow        . rsTbl)
+  , ("rsTblElems", forceAndShowVec     . rsTbl)
+  , ("tbl'"      , forceAndShow        . tbl')
+  , ("tbl'Elems" , forceAndShowVec     . tbl')
+  , ("teds'"     , forceAndShow        . teds')  -- doesn't show much, a Vec
+  , ("teds'_0"   , forceAndShow        . teds'_0)
+  , ("teds'_1"   , forceAndShow        . teds'_1)
   , ("teds''_0"  , flip indexAndShow 0 . teds')
   , ("teds''_1"  , flip indexAndShow 1 . teds')
   ]
