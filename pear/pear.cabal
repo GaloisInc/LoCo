@@ -47,14 +47,9 @@ library
         Language.PEAR.Region.API
         Language.PEAR.Region.Implem
         Language.PEAR.Region.Test
-        Language.PEAR.Primitives
-        Language.PEAR.ParserLibrary
         Language.PEAR.Types
         Language.PEAR.Util
 
-        Language.OptimalPEAR.Examples.ICC_V1
-        Language.OptimalPEAR.Examples.ICC_Optimal
-        Language.OptimalPEAR.Examples.ICC_Demo
         Language.OptimalPEAR.Examples.ICC_Inputs
         Language.OptimalPEAR.RunOptimal
         
