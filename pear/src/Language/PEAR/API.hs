@@ -321,9 +321,7 @@ mCheckWC wc r = if checkWC wc (r_width r) then
 -- 'conforming' regions
 
 -- FIXME: improve SRP/DRP
---   - functor/etc instances
---   - hide 2nd argument in exports
-
+--   - other instances besides Functor
 
 -- | SRP - Static Region Parser
 data SRP m a = SRP{ srpW :: Width
