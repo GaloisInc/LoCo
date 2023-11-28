@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedRecordDot #-}
-
 module Language.OptimalPEAR.Examples.ICC_Tests where
 
 -- local modules:
