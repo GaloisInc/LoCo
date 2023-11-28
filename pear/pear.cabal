@@ -50,14 +50,11 @@ library
         Language.PEAR.Region.Test
         Language.PEAR.Types
         Language.PEAR.Util
-
         Language.OptimalPEAR.Examples.ICC_Inputs
+        Language.OptimalPEAR.Examples.ICC_Optimal
+        Language.OptimalPEAR.Examples.ICC_Spec
+        Language.OptimalPEAR.Examples.ICC_Tests
         Language.OptimalPEAR.RunOptimal
-        
-        -- Language.LR.Implem
-        Language.LR.Examples.ICC_Spec
-        Language.LR.Examples.ICC_Tests
-        Language.LR.Examples.ICC_Optimal
 
     build-depends:
         base ^>=4.16.4.0,

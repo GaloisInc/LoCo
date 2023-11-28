@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 
-module Language.LR.Examples.ICC_Spec where
+module Language.OptimalPEAR.Examples.ICC_Spec where
 
 -- base pkgs:
 import           Data.Word

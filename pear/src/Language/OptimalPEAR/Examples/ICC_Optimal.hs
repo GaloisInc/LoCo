@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Language.LR.Examples.ICC_Optimal where
+module Language.OptimalPEAR.Examples.ICC_Optimal where
 
 -- base pkgs:
 import           Control.Monad.IO.Class
@@ -13,7 +13,7 @@ import           Thunk.RefVal (Thunked, delayAction, delayTuple, force)
 import           Thunk.Vector
 
 -- local PEAR modules:
-import           Language.LR.Examples.ICC_Spec
+import           Language.OptimalPEAR.Examples.ICC_Spec
 import           Language.PEAR.API
 import qualified Language.PEAR.Region.API as R
 import           Language.PEAR.Region.API(Region(..))

@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 
-module Language.LR.Examples.ICC_Tests where
+module Language.OptimalPEAR.Examples.ICC_Tests where
 
 -- local modules:
-import           Language.LR.Examples.ICC_Spec
+import           Language.OptimalPEAR.Examples.ICC_Spec
 import           Language.OptimalPEAR.Examples.ICC_Inputs
 
 import           Language.PEAR.API
