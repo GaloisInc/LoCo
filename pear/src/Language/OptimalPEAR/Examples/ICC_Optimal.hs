@@ -24,13 +24,6 @@ import           Language.OptimalPEAR.RunOptimal
 
 ---- ICC : Optim(l-PEAR), not using vectors ------------------------
 
--- Misc
---  - Aha: OverloadedRecordDot conflicts with Optimal. ?
---  - no support for nested tuple patterns: (?)
---      , ((a,b),c)    = <| return ((1,2),3) |>
---  - no support for '_' bindings.
---  - cannot inline type TBL
-
 type TBL = [(Word32,Word32)]
 
 [optimal|
@@ -105,13 +98,20 @@ icc_v rFile =
   }
 |]
 
+
 -- Optimal: Wants/Issues
 --  - nice to have ints, to apply to index
 --  - allows duplicate names in both the module and in the type!
 --  - handle index errors "ourselves", rather not this:
---     runp_v ["teds''_0"] d1
---     ...
---     *** Exception: index out of bounds (0,0)
+--      runp_v ["teds''_0"] d1
+--      ...
+--      *** Exception: index out of bounds (0,0)
+--  - what is the Optimal approach to handling errors? needs thought.
+--  - Aha: OverloadedRecordDot conflicts with Optimal. ?
+--  - no support for nested tuple patterns: (?)
+--      , ((a,b),c)    = <| return ((1,2),3) |>
+--  - no support for '_' bindings.
+--  - cannot inline the type TBL in the above
 
 i_0 = 0 :: Int
 i_1 = 1 :: Int

@@ -199,7 +199,6 @@ appDRP' p r =
 data VR a = VR {v :: a, r :: Region}
             deriving (Eq,Ord,Read,Show)
 
-
 ---- abstractions / using ------------------------------------------
 
 pairSRPs :: Monad m => SRP m a -> SRP m b -> SRP m (a,b)
@@ -322,6 +321,16 @@ mCheckWC wc r = if checkWC wc (r_width r) then
 
 -- FIXME: improve SRP/DRP
 --   - other instances besides Functor
+-- Design
+--  - user can write PT monads, ignore SRP/DRP
+--  - user should try to stay in SRP/DRP as long as possible.
+--    - feasible? did I make it easy?
+--    - did I even communicate this? prob. not.
+--    - TODO: way to make enforce?  desired?
+--  - now that opt-bindings & one region & parser application are no
+--    longer associated 1-1, the user has more options.
+--
+--  - making SRP/DRP Applicative: helpful?
 
 -- | SRP - Static Region Parser
 data SRP m a = SRP{ srpW :: Width
