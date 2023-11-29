@@ -321,8 +321,10 @@ mCheckWC wc r = if checkWC wc (r_width r) then
 
 -- FIXME: improve SRP/DRP
 --   - other instances besides Functor
--- Design
---  - user can write PT monads, ignore SRP/DRP
+--
+-- Design Questions & Notes:
+--  - user *can* write PT monads, ignore SRP/DRP
+--    - discourage somehow??
 --  - user should try to stay in SRP/DRP as long as possible.
 --    - feasible? did I make it easy?
 --    - did I even communicate this? prob. not.
