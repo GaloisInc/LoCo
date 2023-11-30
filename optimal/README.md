@@ -29,10 +29,6 @@
       - [`map`](#map)
       - [`index`](#index-1)
     - [Tuple Patterns](#tuple-patterns)
-  - [How does Optimal(L) work?](#how-does-optimall-work)
-  - [How do I make a new L?](#how-do-i-make-a-new-l)
-- [Reference](#reference)
-  - [Types](#types-1)
 
 
 # Introduction
@@ -466,11 +462,7 @@ TODO
 
 
 
----
-
-++++ Nothing polished below this point ++++
-
-
+<!--
 ## How does Optimal(L) work?
 
 - Analyzes expressions to determine need for for expression reuse
@@ -507,4 +499,4 @@ TYPE
     | '{' (VARIDENT ':' TYPE ',')+ '}'
     | 'Vec' '<' TYIDENT '>'
 ```
-
+-->
