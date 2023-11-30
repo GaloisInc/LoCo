@@ -23,6 +23,7 @@ module Language.PEAR.API
 
   -- creating parsing primitives:
   , mkPrimSRP
+  , mkPrimSRP'
   , mkPrimDRP
 
   -- applying primitives to regions:
@@ -126,6 +127,9 @@ mkPrimSRP w f =
              except $ elaboratePossibly ["at region " ++ R.ppRegion r] $ f cs
              -- note that w is checked during apply
      }
+
+mkPrimSRP' :: Width -> (Region -> PT m a) -> SRP m a
+mkPrimSRP' = SRP
 
 mkPrimDRP wc f =
   DRP{ drpC = wc
