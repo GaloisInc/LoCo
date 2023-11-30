@@ -35,8 +35,10 @@ data ModuleBinding e
   | Value e
   | VectorReplicate Symbol e -- vector introduction
   | VectorGenerate Symbol e -- vector introduction
+  | VectorGenerateLit Int e -- vector introduction
   | VectorMap Symbol e -- vector transformation
   | VectorIndex Symbol Symbol -- vector elimination
+  | VectorIndexLit Symbol Int -- vector elimination
   | ModuleIntro
       Symbol
       -- ^ module constructor fn (*not* the module type)
@@ -56,8 +58,10 @@ sequenceModuleBinding binding =
     Value e -> Value <$> e
     VectorReplicate s e -> VectorReplicate s <$> e
     VectorGenerate s e -> VectorGenerate s <$> e
+    VectorGenerateLit i e -> VectorGenerateLit i <$> e
     VectorMap s e -> VectorMap s <$> e
     VectorIndex s1 s2 -> pure (VectorIndex s1 s2)
+    VectorIndexLit s i -> pure (VectorIndexLit s i)
     ModuleIntro mdl args -> pure (ModuleIntro mdl args)
     ModuleIndex mdl field -> pure (ModuleIndex mdl field)
 
@@ -122,8 +126,10 @@ bindingThunks modBinds binding =
     Value e -> go e
     VectorReplicate len fill -> go (name len) <> go fill
     VectorGenerate len fill -> go (name len) <> go fill
+    VectorGenerateLit _len fill -> go fill
     VectorMap vec transform -> go (name vec) <> go transform
     VectorIndex vec idx -> go (name vec) <> go (name idx)
+    VectorIndexLit vec _idx -> go (name vec)
     ModuleIntro _modName modArgs -> foldMap (go . name) modArgs
     ModuleIndex modThunk _field -> go (name modThunk)
   where

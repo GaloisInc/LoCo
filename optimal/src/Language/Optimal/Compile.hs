@@ -113,7 +113,9 @@ compileModuleBindings orderedModBinds =
         (Sym s, Value expr) -> onPath s $ valIntro expr
         (Sym s, VectorReplicate len fill) -> onPath s $ vecReplicate len fill
         (Sym s, VectorGenerate len fill) -> onPath s $ vecGenerate len fill
+        (Sym s, VectorGenerateLit len fill) -> onPath s $ vecGenerateLit len fill
         (Sym s, VectorIndex vec idx) -> onPath s $ vecIndex vec idx
+        (Sym s, VectorIndexLit vec idx) -> onPath s $ vecIndexLit vec idx
         (Sym s, VectorMap vec fn) -> onPath s $ vecMap vec fn
         (Sym s, ModuleIntro m params) -> onPath s $ modIntro m params
         (Sym _, ModuleIndex m field) -> onPath (name m) $ onPath (name field) $ modIndex m field
@@ -248,11 +250,23 @@ vecGenerate len fill =
     expr <- [|vGenerate $(varE (name len)) $(asExp fill)|]
     exprIntro expr
 
+vecGenerateLit :: (Free e, Haskell e, Rename e) => Int -> e -> ModQ Exp
+vecGenerateLit len fill =
+  do
+    expr <- [|vGenerate $(litE (integerL (fromIntegral len))) $(asExp fill)|]
+    exprIntro expr
+
 -- | The result has type m (Thunked m a)
 vecIndex :: Symbol -> Symbol -> ModQ Exp
 vecIndex vec idx =
   do
     expr <- [|vIndex $(varE (name vec)) $(varE (name idx))|]
+    exprIntro expr
+
+vecIndexLit :: Symbol -> Int -> ModQ Exp
+vecIndexLit vec idx =
+  do
+    expr <- [|vIndex $(varE (name vec)) $(litE (integerL (fromIntegral idx)))|]
     exprIntro expr
 
 vecMap :: (Free e, Haskell e, Rename e) => Symbol -> e -> ModQ Exp

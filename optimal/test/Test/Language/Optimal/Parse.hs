@@ -173,6 +173,10 @@ modBindingTests =
         "{ x = generate l <| pure 3 |> }"
         [(Sym "x", VectorGenerate "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
+        "vector generate binding from literal"
+        "{ x = generate 3 <| pure 3 |> }"
+        [(Sym "x", VectorGenerateLit 3 (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+      testSuccess
         "multiple bindings"
         "{ x = <| pure 3 |>, y = replicate x <| pure 'a' |> }"
         [ (Sym "x", Expression (AppE (VarE (mkName "pure")) (LitE (IntegerL 3)))),
@@ -182,6 +186,10 @@ modBindingTests =
         "vector index binding"
         "{ x = index xs i }"
         [(Sym "x", VectorIndex "xs" "i")],
+      testSuccess
+        "vector index binding from literal"
+        "{ x = index xs 3 }"
+        [(Sym "x", VectorIndexLit "xs" 3)],
       testSuccess
         "module intro, no args"
         "{ m = module foo }"

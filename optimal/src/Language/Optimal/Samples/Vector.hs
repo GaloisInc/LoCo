@@ -51,6 +51,12 @@ generateStrPure len = {
   chars = generate len <| mkChar' |>
 }
 
+-- Generation from a literal length
+generateStrLit : Str
+generateStrLit = {
+  chars = generate 3 <| mkChar' |>
+}
+
 type Chr = { c : Char }
 
 -- Indexing from a thunked index
@@ -68,6 +74,14 @@ indexStrPure idx = {
   len = <| pure (idx + 1) |>,
   vs = replicate len <| mkChar |>,
   c = index vs idx
+}
+
+-- Indexing from a literal index
+indexStrLit : Chr
+indexStrLit = {
+  len = <| sampleLength |>,
+  vs = replicate len <| mkChar |>,
+  c = index vs 4
 }
 |]
 

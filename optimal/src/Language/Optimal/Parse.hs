@@ -76,9 +76,14 @@ parseOptimalModuleExpr =
     [ Expression <$> parseValExpr,
       Value <$> parsePureExpr,
       uncurry VectorReplicate <$> parseVecReplicate,
-      uncurry VectorGenerate <$> parseVecGenerate,
+      -- need `try` because `parseVecGenerate` will consume the same prefix that
+      -- `parseVecGenerateLit` recognizes
+      uncurry VectorGenerate <$> try parseVecGenerate,
+      uncurry VectorGenerateLit <$> parseVecGenerateLit,
       uncurry VectorMap <$> parseVecMap,
-      uncurry VectorIndex <$> parseVecIndex,
+      -- `try` needed again, same situation as above
+      uncurry VectorIndex <$> try parseVecIndex,
+      uncurry VectorIndexLit <$> parseVecIndexLit,
       uncurry ModuleIntro <$> parseModIntro,
       uncurry ModuleIndex <$> parseModIndex
     ]
@@ -196,6 +201,15 @@ parseVecGenerate =
     expr <- parseValExpr
     pure (len, expr)
 
+-- | "generate 3 <| e |>"
+parseVecGenerateLit :: Parser e (Int, e)
+parseVecGenerateLit =
+  do
+    ignore (chunk "generate")
+    len <- parseInt
+    expr <- parseValExpr
+    pure (len, expr)
+
 -- | "index xs i"
 parseVecIndex :: Parser e (Symbol, Symbol)
 parseVecIndex =
@@ -203,6 +217,15 @@ parseVecIndex =
     ignore (chunk "index")
     vec <- parseVarName
     idx <- parseVarName
+    pure (vec, idx)
+
+-- | "index xs 3"
+parseVecIndexLit :: Parser e (Symbol, Int)
+parseVecIndexLit =
+  do
+    ignore (chunk "index")
+    vec <- parseVarName
+    idx <- parseInt
     pure (vec, idx)
 
 -- | "map xs <| e |>"
@@ -283,6 +306,15 @@ parseVarName =
   where
     validFirstChar c = isLower c || c == '_'
     validIdentifierChar c = isAlphaNum c || c == '_' || c == '\''
+
+parseInt :: MonadParsec error Text m => m Int
+parseInt =
+  do
+    cs <- some (satisfy isNum)
+    ws
+    pure (read cs)
+  where
+    isNum c = c `elem` ['0' .. '9']
 
 parseTyName :: MonadParsec error Text m => m Symbol
 parseTyName =
