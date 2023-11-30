@@ -139,6 +139,16 @@ subRegion_Possibly (R st w) offset w' =
                     , show (R st w)
                     ]]
 
+rTake :: Width -> Region -> Possibly Region
+rTake toTake (R rStart rLen)
+  | toTake > rLen = Left []
+  | otherwise = Right (R rStart toTake)
+
+rDrop :: Width -> Region -> Possibly Region
+rDrop  toDrop (R rStart rLen)
+  | toDrop > rLen = Left []
+  | otherwise = Right (R (rStart + toDrop) (rLen - toDrop))
+
 split1 :: Region -> Width -> (Region,Region)
 split1 r w = case split1_Possibly r w of
                Left s  -> error $ unlines s

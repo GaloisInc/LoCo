@@ -19,6 +19,9 @@ module Language.PEAR.Region.API
   , splitNWidthP
   , splitNWidthExact
 
+  , rTake
+  , rDrop
+
   , subRegion_Possibly
   , subRegionP
   , regionMinusSuffix
