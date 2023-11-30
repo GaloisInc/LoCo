@@ -344,6 +344,21 @@ data SRP m a = SRP{ srpW :: Width
                   }
      deriving(Functor)
 
+instance Monad m => Applicative (SRP m) where
+  pure = returnSRP
+  SRP fnWidth fnParse <*> SRP aWidth aParse =
+    SRP
+      (fnWidth + aWidth)
+      ( \rBoth ->
+          case R.split1P rBoth fnWidth of
+            Left _ -> error "impossible: width check should have caught this"
+            Right (fnRegion, aRegion) ->
+              do
+                fn <- fnParse fnRegion
+                a <- aParse aRegion
+                pure (fn a)
+      )
+
 -- | DRP - Dynamic Region Parser
 data DRP m a = DRP{ drpC :: WC
                   , drpP :: Region -> PT m (a,Region)
