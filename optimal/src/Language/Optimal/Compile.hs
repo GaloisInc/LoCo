@@ -103,12 +103,12 @@ compileModuleBindings orderedModBinds =
     mkPat pat =
       case pat of
         Sym s -> varP s
-        Tup ss -> tupP (map varP ss)
+        Tup ss -> tupP (map mkPat ss)
 
     compileBinding pat binding =
       case (pat, binding) of
         (Sym s, Expression expr) -> onPath s $ exprIntro expr
-        (Tup ss, Expression expr) -> onPath undefined $ tupleIntro expr
+        (Tup ss, Expression expr) -> onPath undefined $ tupleIntro (length ss) expr
         (Tup _, _) -> fail "cannot bind a tuple to a non-expression"
         (Sym s, Value expr) -> onPath s $ valIntro expr
         (Sym s, VectorReplicate len fill) -> onPath s $ vecReplicate len fill
@@ -165,9 +165,11 @@ exprIntro expr =
     [|delayAction $(forceThunks expr'')|]
 
 -- | Result has type `m (Thunked m a, Thunked m b)`
-tupleIntro :: (Free e, Haskell e, Rename e) => e -> ModQ Exp
-tupleIntro expr =
-  [|delayTuple $(forceThunks expr)|]
+tupleIntro :: (Free e, Haskell e, Rename e) => Int -> e -> ModQ Exp
+tupleIntro len expr
+  | len == 2 = [|delayTuple $(forceThunks expr)|]
+  | len == 3 = [|delayTuple3 $(forceThunks expr)|]
+  | otherwise = fail $ "A " <> show len <> "-tuple is too large for Optimal"
 
 valIntro :: (Free e, Haskell e, Rename e) => e -> ModQ Exp
 valIntro expr =

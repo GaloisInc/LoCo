@@ -63,14 +63,14 @@ sequenceModuleBinding binding =
 
 data Pattern s
   = Sym s
-  | Tup [s] -- or [Pattern]
+  | Tup [Pattern s]
   deriving (Eq, Functor, Ord, Show)
 
 patSyms :: Pattern s -> [s]
 patSyms pat =
   case pat of
     Sym s -> [s]
-    Tup ss -> ss
+    Tup ss -> concatMap patSyms ss
 
 data TypeDecl = TypeDecl
   { tdName :: Symbol,
@@ -135,9 +135,15 @@ topoSortPatterns = topoSortPossibly refersTo
     refersTo p1 p2 =
       case (p1, p2) of
         (Sym s1, Sym s2) -> s1 == s2
-        (Tup ss, Sym s) -> s `elem` ss
+        (Tup ss, Sym s) -> any (s `appearsIn`) ss
         -- Not sure these can come up in practice - for `p2` to be a tuple would
         -- mean we decided that a module binding depended on a tuple, but we
         -- only ever expect to see `Sym` dependencies
         (Sym _, Tup _) -> False
         (Tup ss, Tup ss') -> not (null (ss `intersect` ss'))
+
+appearsIn :: Eq n => n -> Pattern n -> Bool
+appearsIn n pat =
+  case pat of
+    Sym s -> n == s
+    Tup ps -> any (n `appearsIn`) ps

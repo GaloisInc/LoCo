@@ -155,7 +155,15 @@ modBindingTests =
       testSuccess
         "tuple binding"
         "{ (x, y) = <| pure (3, 4) |> }"
-        [(Tup ["x", "y"], Expression (AppE (VarE (mkName "pure")) (TupE [Just (LitE (IntegerL 3)), Just (LitE (IntegerL 4))])))],
+        [(Tup [Sym "x", Sym "y"], Expression (AppE (VarE (mkName "pure")) (TupE [Just (LitE (IntegerL 3)), Just (LitE (IntegerL 4))])))],
+      testSuccess
+        "nested tuple binding 1"
+        "{ (x, (y, z)) = <| pure (3, 4) |> }"
+        [(Tup [Sym "x", Tup [Sym "y", Sym "z"]], Expression (AppE (VarE (mkName "pure")) (TupE [Just (LitE (IntegerL 3)), Just (LitE (IntegerL 4))])))],
+      testSuccess
+        "nested tuple binding 2"
+        "{ ((x, y), z) = <| pure (3, 4) |> }"
+        [(Tup [Tup [Sym "x", Sym "y"], Sym "z"], Expression (AppE (VarE (mkName "pure")) (TupE [Just (LitE (IntegerL 3)), Just (LitE (IntegerL 4))])))],
       testSuccess
         "vector replicate binding"
         "{ x = replicate l <| pure 3 |> }"

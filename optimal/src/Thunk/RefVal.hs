@@ -27,6 +27,18 @@ delayTuple tupleAction =
     refSnd <- liftIO (newIORef (Delay (snd <$> tupleAction)))
     pure (Thunk refFst, Thunk refSnd)
 
+delayTuple3 :: MonadIO m => m (a, b, c) -> m (Thunked m a, Thunked m b, Thunked m c)
+delayTuple3 tupleAction =
+  do
+    refFst <- liftIO (newIORef (Delay (one <$> tupleAction)))
+    refSnd <- liftIO (newIORef (Delay (two <$> tupleAction)))
+    refThd <- liftIO (newIORef (Delay (three <$> tupleAction)))
+    pure (Thunk refFst, Thunk refSnd, Thunk refThd)
+  where
+    one (x, _, _) = x
+    two (_, x, _) = x
+    three (_, _, x) = x
+
 force :: MonadIO m => Thunked m a -> m a
 force (Thunk ref) =
   do

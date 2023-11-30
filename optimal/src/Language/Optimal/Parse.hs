@@ -269,7 +269,7 @@ parseAscription lhs = parseBinop lhs (single ':')
 parsePattern :: MonadParsec error Text m => m (Pattern Symbol)
 parsePattern =
   choice
-    [ Tup <$> parenthesized (sepBy1 parseVarName (ignore (single ','))),
+    [ Tup <$> parenthesized (sepBy1 parsePattern (ignore (single ','))),
       Sym <$> parseVarName
     ]
 
