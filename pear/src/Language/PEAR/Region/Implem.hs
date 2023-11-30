@@ -141,12 +141,12 @@ subRegion_Possibly (R st w) offset w' =
 
 rTake :: Width -> Region -> Possibly Region
 rTake toTake (R rStart rLen)
-  | toTake > rLen = Left []
+  | toTake > rLen = Left ["not enough region available to take"]
   | otherwise = Right (R rStart toTake)
 
 rDrop :: Width -> Region -> Possibly Region
 rDrop  toDrop (R rStart rLen)
-  | toDrop > rLen = Left []
+  | toDrop > rLen = Left ["not enough region available to drop"]
   | otherwise = Right (R (rStart + toDrop) (rLen - toDrop))
 
 split1 :: Region -> Width -> (Region,Region)
