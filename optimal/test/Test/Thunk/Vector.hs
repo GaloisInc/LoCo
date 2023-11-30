@@ -32,7 +32,7 @@ generateSample :: Int -> (Int -> IO Int) -> IO (Sample IO)
 mapSample :: (Int -> IO Int) -> Sample IO -> IO (Sample IO)
 
 [optimal|
-type Sample = { xs : [Int] }
+type Sample = { xs : Vec<Int> }
 
 -- Second argument manifestly *not* an Int
 replicateSample : Int -> Int -> Sample
