@@ -169,6 +169,10 @@ modBindingTests =
         "{ x = replicate l <| pure 3 |> }"
         [(Sym "x", VectorReplicate "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
       testSuccess
+        "vector replicate binding from literal"
+        "{ x = replicate 3 <| pure 3 |> }"
+        [(Sym "x", VectorReplicateLit 3 (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],
+      testSuccess
         "vector generate binding"
         "{ x = generate l <| pure 3 |> }"
         [(Sym "x", VectorGenerate "l" (AppE (VarE (mkName "pure")) (LitE (IntegerL 3))))],

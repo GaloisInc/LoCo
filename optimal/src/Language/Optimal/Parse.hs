@@ -75,13 +75,13 @@ parseOptimalModuleExpr =
   choice
     [ Expression <$> parseValExpr,
       Value <$> parsePureExpr,
-      uncurry VectorReplicate <$> parseVecReplicate,
-      -- need `try` because `parseVecGenerate` will consume the same prefix that
-      -- `parseVecGenerateLit` recognizes
+      -- need `try` because `parseVecReplicate` will consume the same prefix
+      -- that `parseVecReplicateLit` recognizes
+      uncurry VectorReplicate <$> try parseVecReplicate,
+      uncurry VectorReplicateLit <$> parseVecReplicateLit,
       uncurry VectorGenerate <$> try parseVecGenerate,
       uncurry VectorGenerateLit <$> parseVecGenerateLit,
       uncurry VectorMap <$> parseVecMap,
-      -- `try` needed again, same situation as above
       uncurry VectorIndex <$> try parseVecIndex,
       uncurry VectorIndexLit <$> parseVecIndexLit,
       uncurry ModuleIntro <$> parseModIntro,
@@ -189,6 +189,15 @@ parseVecReplicate =
   do
     ignore (chunk "replicate")
     len <- parseVarName
+    expr <- parseValExpr
+    pure (len, expr)
+
+-- | "replicate 3 <| e |>"
+parseVecReplicateLit :: Parser e (Int, e)
+parseVecReplicateLit =
+  do
+    ignore (chunk "replicate")
+    len <- parseInt
     expr <- parseValExpr
     pure (len, expr)
 

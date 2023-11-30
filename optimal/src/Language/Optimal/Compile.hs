@@ -112,6 +112,7 @@ compileModuleBindings orderedModBinds =
         (Tup _, _) -> fail "cannot bind a tuple to a non-expression"
         (Sym s, Value expr) -> onPath s $ valIntro expr
         (Sym s, VectorReplicate len fill) -> onPath s $ vecReplicate len fill
+        (Sym s, VectorReplicateLit len fill) -> onPath s $ vecReplicateLit len fill
         (Sym s, VectorGenerate len fill) -> onPath s $ vecGenerate len fill
         (Sym s, VectorGenerateLit len fill) -> onPath s $ vecGenerateLit len fill
         (Sym s, VectorIndex vec idx) -> onPath s $ vecIndex vec idx
@@ -242,6 +243,12 @@ vecReplicate :: (Free e, Haskell e, Rename e) => Symbol -> e -> ModQ Exp
 vecReplicate len fill =
   do
     expr <- [|vReplicate $(varE (name len)) $(asExp fill)|]
+    exprIntro expr
+
+vecReplicateLit :: (Free e, Haskell e, Rename e) => Int -> e -> ModQ Exp
+vecReplicateLit len fill =
+  do
+    expr <- [|vReplicate $(litE (integerL (fromIntegral len))) $(asExp fill)|]
     exprIntro expr
 
 vecGenerate :: (Free e, Haskell e, Rename e) => Symbol -> e -> ModQ Exp

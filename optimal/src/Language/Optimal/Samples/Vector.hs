@@ -38,6 +38,12 @@ replicateStrPure len = {
   chars = replicate len <| mkChar |>
 }
 
+-- Replication from a literal length
+replicateStrLit : Str
+replicateStrLit = {
+  chars = replicate 5 <| mkChar |>,
+}
+
 -- Generation from a thunked length
 generateStrThunked : Str
 generateStrThunked = {

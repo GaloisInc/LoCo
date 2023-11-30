@@ -34,6 +34,7 @@ data ModuleBinding e
   = Expression e
   | Value e
   | VectorReplicate Symbol e -- vector introduction
+  | VectorReplicateLit Int e -- vector introduction
   | VectorGenerate Symbol e -- vector introduction
   | VectorGenerateLit Int e -- vector introduction
   | VectorMap Symbol e -- vector transformation
@@ -57,6 +58,7 @@ sequenceModuleBinding binding =
     Expression e -> Expression <$> e
     Value e -> Value <$> e
     VectorReplicate s e -> VectorReplicate s <$> e
+    VectorReplicateLit i e -> VectorReplicateLit i <$> e
     VectorGenerate s e -> VectorGenerate s <$> e
     VectorGenerateLit i e -> VectorGenerateLit i <$> e
     VectorMap s e -> VectorMap s <$> e
@@ -125,6 +127,7 @@ bindingThunks modBinds binding =
     Expression e -> go e
     Value e -> go e
     VectorReplicate len fill -> go (name len) <> go fill
+    VectorReplicateLit _len fill -> go fill
     VectorGenerate len fill -> go (name len) <> go fill
     VectorGenerateLit _len fill -> go fill
     VectorMap vec transform -> go (name vec) <> go transform
