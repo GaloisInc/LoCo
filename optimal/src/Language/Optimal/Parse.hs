@@ -26,6 +26,7 @@ newtype Parser e a = Parser {unParser :: ReaderT (String -> Either String e) (Pa
       Applicative,
       Monad,
       Alternative,
+      MonadFail,
       MonadPlus,
       MonadReader (String -> Either String e),
       MonadParsec Void Text
@@ -271,14 +272,20 @@ parseModIndex =
 -- | Parse a curly-braced, comma-separated, non-empty set of "bindings",
 -- producing a mapping from symbols to expressions. Parsing is parametric over
 -- binding syntax ('=', e.g.) and expression syntax (e.g. `Exp`)
-parseBindings :: Ord lhs => Parser e lhs -> Parser e separator -> Parser e rhs -> Parser e (Map lhs rhs)
+parseBindings ::
+  (Ord lhs, Show lhs) =>
+  Parser e lhs ->
+  Parser e separator ->
+  Parser e rhs ->
+  Parser e (Map lhs rhs)
 parseBindings parseLhs parseOp parseRhs =
   do
     binds <- braced (binding `sepEndBy1` separator)
-    pure (Map.fromList binds)
+    sequence (Map.fromListWithKey dup [(k, pure v) | (k, v) <- binds])
   where
     binding = parseBinop parseLhs parseOp (const parseRhs)
     separator = single ',' >> ws
+    dup k _ _ = fail $ "duplicate binding: " <> show k
 
 parseBinop :: Parser e lhs -> Parser e op -> (lhs -> Parser e rhs) -> Parser e (lhs, rhs)
 parseBinop parseLhs parseOp parseRhs =
