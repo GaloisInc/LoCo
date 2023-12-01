@@ -2,30 +2,31 @@
   - [Types](#types)
     - [Modules](#modules)
     - [Aliases](#aliases)
-    - [TODO: vectors here?](#todo-vectors-here)
+    - [Vectors](#vectors)
   - [Expressions](#expressions)
     - [Code Generation](#code-generation)
-  - [Vectors](#vectors)
+  - [Vectors](#vectors-1)
     - [`generate`](#generate)
       - [Code Generation](#code-generation-1)
+    - [`replicate`](#replicate)
+    - [`map`](#map)
     - [`index`](#index)
-      - [Code Generation](#code-generation-2)
     - [TODO: Modules with Parameters](#todo-modules-with-parameters)
 - [User Code](#user-code)
   - [`Thunked`](#thunked)
   - [Expressions](#expressions-1)
   - [`Vector`](#vector)
-  - [Vectors](#vectors-1)
+  - [Vectors](#vectors-2)
 - [Evaluation Semantics](#evaluation-semantics)
   - [Expressions](#expressions-2)
-  - [Vectors](#vectors-2)
+  - [Vectors](#vectors-3)
 - [Source Language Details](#source-language-details)
   - [Typing Rules](#typing-rules)
     - [Expressions](#expressions-3)
-    - [Vectors](#vectors-3)
+    - [Vectors](#vectors-4)
       - [`generate`](#generate-1)
-      - [`replicate`](#replicate)
-      - [`map`](#map)
+      - [`replicate`](#replicate-1)
+      - [`map`](#map-1)
       - [`index`](#index-1)
     - [Tuple Patterns](#tuple-patterns)
 
@@ -73,7 +74,16 @@ type Baz = Foo
 ```
 
 
-### TODO: vectors here?
+### Vectors
+
+Users can also declare vector types:
+```hs
+[optimal|
+type Boo = Vec<Bool>
+|]
+```
+
+See [below](#vectors-1) for more details on vectors.
 
 
 ## Expressions
@@ -105,7 +115,7 @@ necessary, even though `y` mentions `x`. A side effect of `Optimal`'s efforts to
 share computation mean that declarations in generated Haskell code are
 automatically topologically reordered.
 
-TODO: See below for the details on the typing rules that govern these
+See [below](#expressions-3) for details on the typing rules that govern these
 expressions.
 
 TODO: commutative monads?
@@ -170,8 +180,9 @@ bar' = {
 |]
 ```
 
-See below for more details on the typing rules governing vectors.different
-vector syntactic forms, and more detailed semantics. TODO.
+See [below](#vectors-4) for more details on the typing rules governing vectors,
+different vector syntactic forms, and more detailed semantics.
+
 
 #### Code Generation
 
@@ -186,12 +197,62 @@ This introduces a new type, `Vector`. `Optimal` exposes this type, as well as a
 simple API for it, which is used in code generation and is available to end
 users.
 
-See below for details on how to interact with `Vector`s. TODO.
+See [below](#vector) for details on how to interact with `Vector`s.
+
+
+### `replicate`
+
+Vectors can also be created via `replicate`:
+```hs
+[optimal|
+bar : Bar
+bar = {
+  xs = replicate 100 <| pure True |>,
+}
+|]
+```
+
+Unlike `generate`, the fill expression is not a function, but rather a monadic
+expression. Like `generate`, the length can also be provided as an identifier.
+
+
+### `map`
+
+Vectors can be transformed via `map`:
+```hs
+[optimal|
+bar : Bar
+bar = {
+  xs = generate 100 <| \idx -> pure (isPrime idx) |>,
+  ys = map xs <| \element -> pure (not element) |>,
+}
+|]
+```
+
 
 ### `index`
 
+One elimination form of vectors is `index`:
 
-#### Code Generation
+```hs
+[optimal|
+bar : Bar
+bar = {
+  xs = generate 100 <| \idx -> pure (isPrime idx) |>,
+  x = index xs 0,
+}
+|]
+```
+
+This binds `x` to the zeroth element of the vector `xs`. `x` can be treated as a
+`Bool` in future `Optimal` computations. Note that `Bar`'s type does not mention
+an `x` field. If it did, it would be a `Bool`, and an `x` accessor would exist
+with the following type:
+```hs
+x :: Bar m -> Thunked m Bool -- caveat: record accessor
+```
+
+The index parameter can also be provided to `index` as an identifier.
 
 
 ### TODO: Modules with Parameters
@@ -208,7 +269,8 @@ force :: MonadIO m => Thunked m a -> m a
 ```
 
 A `Thunked` value can be thought of as a suspended computation, and `force`
-evaluates that computation to yield its result. TODO it does more.
+evaluates that computation to yield its result. See
+[below](#evaluation-semantics) for more detail on this process.
 
 
 ## Expressions
@@ -243,8 +305,8 @@ True
 `Vector`s appear in modules as `Thunked` values, so they need to be `force`d
 before they can be manipulated. 
 
-TODO: indexing
-
+The main eliminator for `Vector` is `vIndex :: Vector m a -> Int -> m a`. It
+indexes a vector and `force`s the element at that index.
 
 ## Vectors
 
@@ -279,11 +341,11 @@ with a bit more syntactic noise and evaluation overhead.
 ## Expressions
 
 Recall that `Optimal` is explicitly lazy. This means that the creation of `f`
-above, in TODO, does not trigger evaluation of the expressions bound within it.
-Furthermore, accessing the fields `x` and `y` do nothing more than expose the
-computations-in-waiting - they do not evaluate them. Forcing `xThunk` is the
-first time the computation associated with `x` is performed - likewise for
-forcing `yThunk`.
+[above](#expressions-1), does not trigger evaluation of the expressions bound
+within it. Furthermore, accessing the fields `x` and `y` do nothing more than
+expose the computations-in-waiting - they do not evaluate them. Forcing `xThunk`
+is the first time the computation associated with `x` is performed - likewise
+for forcing `yThunk`.
 
 Recall also that `Optimal` evaluates things at most once. This means that once
 `xThunk` is forced, its result is cached indefinitely, and any other
@@ -310,10 +372,15 @@ forcing `xThunk` will leverage the result that was computed when forcing
 
 ## Vectors
 
-TODO:
-- Forcing a vector does not force its elements
-- Forcing one element does not necessarily force others
-- Mapping preserves this laziness
+Vectors are lazy in `Optimal`. Operations on one element do not affect
+operations on other elements. One such operation is `force`: forcing the
+computation of one element of a vector will not force the computation of any
+others. Also, as with expressions, forcing the same element a second time will
+reuse the previously-computed value.
+
+This laziness persists through transformations. Forcing one element of a vector
+produced by applying `map` to another will force the new element and the
+original element, but not necessarily other elements of either vector.
 
 
 # Source Language Details
@@ -436,13 +503,14 @@ TODO
 
 TODO
 
+
+
+<!--
+
 - Can introduce "regular" values or vectors of values
   - `L` need not have a notion of lists!
 - Can eliminate lists of values
 
-
-
-<!--
 ## How does Optimal(L) work?
 
 - Analyzes expressions to determine need for for expression reuse
