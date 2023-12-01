@@ -16,3 +16,16 @@ of the expression's result. In this way, `Optimal` has a semantics that is both
 lazy and ensures an "evaluated at most once" principle.
 
 For more details, see our [reference guide](./doc/reference.md).
+
+
+## Future Work
+
+One future line of work could be reworking the compilation process to produce
+data dependency graphs, or generating them as computations are performed. There
+exists limited support for real-time "tracing" of binds as they're computed.
+
+Another is more principled support for tuple patterns. The support is currently
+limited to non-nested 2-tuples and 3-tuples.
+
+More research on commutative monads and how `Optimal` can take advantage of them
+would probably benefit the tool, and would provide more motivating use cases.
