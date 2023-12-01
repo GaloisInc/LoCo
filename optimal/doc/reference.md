@@ -260,6 +260,8 @@ The index parameter can also be provided to `index` as an identifier.
 
 # User Code
 
+Many of the below snippets can be found in `Language.Optimal.Samples.Doc`.
+
 ## `Thunked`
 
 Users need to know little about `Thunked` values in order to work with them,
