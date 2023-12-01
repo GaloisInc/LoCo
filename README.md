@@ -10,3 +10,9 @@ The most modern tooling here is:
 
 Older work can be found in:
 - [`locc`](./locc): early efforts towards static format/parser reasoning
+
+
+# Acknowledgements
+
+This material is based upon work supported by the Defense Advanced Research
+Projects Agency (DARPA) under Contract No. HR001119C0076.
