@@ -1,6 +1,7 @@
 cabal-version:      2.4
 name:               optimal-pear
 version:            0.1.0.0
+license-file:       LICENSE
 author:             Sam Cowger
 maintainer:         sam@galois.com
 
